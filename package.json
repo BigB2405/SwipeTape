@@ -1,0 +1,6 @@
+{
+  "name": "swipetape",
+  "private": true,
+  "type": "module",
+  "description": "Swipe on 30-second song clips, get a personalized playlist."
+}

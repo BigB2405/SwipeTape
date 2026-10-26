@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Swipetape</title>
+  <meta name="description" content="Swipe on 30-second song clips and get a playlist built from your taste." />
+  <meta name="theme-color" content="#111418" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='1' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%23fd267a'/%3E%3Cstop offset='1' stop-color='%23ff6036'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M13 22.5a3.5 3.5 0 1 1-2-3.2V9l11-2.5v12.5a3.5 3.5 0 1 1-2-3.2V10.2l-7 1.6z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="logo" id="homeBtn" aria-label="Swipetape home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fd267a"/><stop offset="1" stop-color="#ff6036"/></linearGradient></defs><path d="M13 24a4 4 0 1 1-2.3-3.6V8.2L24 5v14.5a4 4 0 1 1-2.3-3.6V9.6l-8.7 2z" fill="url(#lg)"/></svg>
+        <span>swipetape</span>
+      </button>
+      <div class="counter" id="counter" hidden></div>
+    </header>
+
+    <!-- START -->
+    <section class="screen" id="startScreen">
+      <div class="hero">
+        <div class="hero-stack" aria-hidden="true">
+          <div class="hs hs1"></div><div class="hs hs2"></div><div class="hs hs3">
+            <svg viewBox="0 0 32 32"><path d="M13 24a4 4 0 1 1-2.3-3.6V8.2L24 5v14.5a4 4 0 1 1-2.3-3.6V9.6l-8.7 2z" fill="#fff"/></svg>
+          </div>
+        </div>
+        <h1>Swipe right on<br />your next favorite song.</h1>
+        <p class="sub">Hear a 30-second clip of each song. Swipe right to like it, left to skip, or up if you love it. When you're done, we'll make a playlist from your picks.</p>
+
+        <div class="picker" role="radiogroup" aria-label="How many songs to rate">
+          <span class="picker-label">Songs to rate</span>
+          <div class="chips">
+            <button class="chip" role="radio" data-n="10">10</button>
+            <button class="chip on" role="radio" data-n="12" aria-checked="true">12</button>
+            <button class="chip" role="radio" data-n="15">15</button>
+          </div>
+        </div>
+
+        <button class="cta" id="startBtn" disabled>
+          <span class="cta-text">Loading songs…</span>
+        </button>
+        <p class="fine">Turn your sound on 🔊 · Keyboard: ← nope · → like · ↑ love · space pause</p>
+      </div>
+    </section>
+
+    <!-- SWIPE -->
+    <section class="screen" id="swipeScreen" hidden>
+      <div class="deck" id="deck"></div>
+      <div class="actions">
+        <button class="act act-sm rewind" id="rewindBtn" aria-label="Undo last swipe" title="Undo">
+          <svg viewBox="0 0 24 24"><path d="M12.5 4a8 8 0 1 1-7.7 10.1 1.2 1.2 0 0 1 2.3-.6A5.6 5.6 0 1 0 12.5 6.4H9.9l1.6 1.6a1.2 1.2 0 0 1-1.7 1.7L6.2 6.1a1.2 1.2 0 0 1 0-1.7L9.8.9a1.2 1.2 0 0 1 1.7 1.7L9.9 4z"/></svg>
+        </button>
+        <button class="act act-lg nope" id="nopeBtn" aria-label="Nope" title="Nope (←)">
+          <svg viewBox="0 0 24 24"><path d="M14.1 12l6.4-6.4a1.5 1.5 0 0 0-2.1-2.1L12 9.9 5.6 3.5a1.5 1.5 0 0 0-2.1 2.1L9.9 12l-6.4 6.4a1.5 1.5 0 1 0 2.1 2.1l6.4-6.4 6.4 6.4a1.5 1.5 0 0 0 2.1-2.1z"/></svg>
+        </button>
+        <button class="act act-sm love" id="loveBtn" aria-label="Love it" title="Love (↑)">
+          <svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/></svg>
+        </button>
+        <button class="act act-lg like" id="likeBtn" aria-label="Like" title="Like (→)">
+          <svg viewBox="0 0 24 24"><path d="M12 21.2l-1.4-1.3C5.4 15.3 2 12.2 2 8.4 2 5.3 4.4 3 7.4 3c1.7 0 3.4.8 4.6 2.1C13.2 3.8 14.9 3 16.6 3 19.6 3 22 5.3 22 8.4c0 3.8-3.4 6.9-8.6 11.5z"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="screen" id="resultScreen" hidden>
+      <div class="match" id="matchBanner">
+        <div class="collage" id="collage"></div>
+        <h2 class="match-title">Your mix is ready</h2>
+        <p class="match-sub" id="matchSub"></p>
+      </div>
+
+      <div class="taste" id="taste"></div>
+
+      <div class="pl-head">
+        <h3>Your playlist</h3>
+        <span id="plMeta"></span>
+      </div>
+      <ol class="playlist" id="playlist"></ol>
+
+      <div class="result-actions">
+        <button class="cta" id="copyBtn"><span class="cta-text">Copy Spotify links</span></button>
+        <button class="ghost" id="againBtn">Swipe again</button>
+      </div>
+      <p class="fine">Tip: paste the copied links into a Spotify playlist in the desktop app to add every song at once.</p>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <audio id="player" preload="auto"></audio>
+  <script src="app.js" defer></script>
+</body>
+</html>
