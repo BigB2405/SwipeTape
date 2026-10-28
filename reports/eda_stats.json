@@ -1,0 +1,76 @@
+{
+  "train_rows": 57801,
+  "popularity": {
+    "median": 35.0,
+    "share_zero": 0.059,
+    "share_ge_40": 0.429,
+    "share_ge_62": 0.094,
+    "artists_ge_62_share": 0.162
+  },
+  "top_correlations": {
+    "energy~loudness": 0.76,
+    "energy~acousticness": -0.73,
+    "acousticness~loudness": -0.58,
+    "danceability~valence": 0.49,
+    "instrumentalness~loudness": -0.42
+  },
+  "max_abs_corr_with_popularity": 0.18,
+  "eta2_genre": {
+    "danceability": 0.44,
+    "energy": 0.48,
+    "valence": 0.33,
+    "acousticness": 0.51,
+    "instrumentalness": 0.46,
+    "speechiness": 0.49,
+    "liveness": 0.17,
+    "tempo": 0.09,
+    "loudness": 0.46
+  },
+  "eta2_family": {
+    "danceability": 0.17,
+    "energy": 0.28,
+    "valence": 0.15,
+    "acousticness": 0.3,
+    "instrumentalness": 0.18,
+    "speechiness": 0.14,
+    "liveness": 0.05,
+    "tempo": 0.03,
+    "loudness": 0.22
+  },
+  "multi_genre_share": 0.161,
+  "top_genre_pairs": {
+    "singer-songwriter + songwriter": 569,
+    "dub + dubstep": 488,
+    "punk + punk-rock": 396,
+    "indie + indie-pop": 354,
+    "reggae + reggaeton": 302
+  },
+  "pca_var": [
+    0.317,
+    0.162
+  ],
+  "pca_loadings": {
+    "PC1": {
+      "danceability": 0.24,
+      "energy": 0.51,
+      "valence": 0.3,
+      "acousticness": -0.44,
+      "instrumentalness": -0.28,
+      "speechiness": 0.09,
+      "liveness": 0.09,
+      "tempo": 0.19,
+      "loudness": 0.52
+    },
+    "PC2": {
+      "danceability": 0.56,
+      "energy": -0.28,
+      "valence": 0.53,
+      "acousticness": 0.32,
+      "instrumentalness": -0.33,
+      "speechiness": 0.07,
+      "liveness": -0.18,
+      "tempo": -0.28,
+      "loudness": -0.08
+    }
+  }
+}

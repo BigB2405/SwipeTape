@@ -39,3 +39,26 @@ The project combines a curated music dataset, client-side recommendation logic, 
 ├── package.json
 ├── vercel.json               # Vercel configuration and cache headers
 ├── README.md
+
+## Data preparation & EDA (D2)
+
+**Data access:** download the [Spotify Tracks Dataset](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset) from Kaggle and unzip `dataset.csv` into `data/raw/` (raw and processed data are gitignored).
+
+```bash
+uv sync                                         # Python env (pyproject.toml)
+uv run python scripts/prepare_data.py           # audit + clean + split -> data/processed/
+uv run python scripts/make_plots.py             # EDA figures -> reports/figures/
+uv run python scripts/build_data.py             # (app) regenerate public/songs.json
+```
+
+**Supabase:** create a project, run `sql/schema.sql` in the SQL editor, copy `.env.example` to `.env`, then `uv run python scripts/load_supabase.py`. Only train/val rows are uploaded; the test split stays in `data/processed/test.parquet` until D6.
+
+**Dashboard:** `uv run streamlit run dashboard/app.py` locally, or deploy on Modal:
+
+```bash
+uv run modal setup
+uv run modal secret create swipetape-supabase SUPABASE_URL=... SUPABASE_ANON_KEY=...
+uv run modal deploy dashboard/modal_app.py
+```
+
+Docs: [`docs/data_dictionary.md`](docs/data_dictionary.md) · [`docs/D2_data_note.md`](docs/D2_data_note.md)
