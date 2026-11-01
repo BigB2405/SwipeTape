@@ -49,6 +49,14 @@ def load_table(name: str, order: str) -> pd.DataFrame:
     return pd.DataFrame(client().table(name).select("*").order(order).execute().data)
 
 
+def hist_counts(df: pd.DataFrame, col: str, bins, by: list[str] = [], right: bool = True) -> pd.DataFrame:
+    """Bin counts per group, so charts send the browser a few rows instead of every track."""
+    binned = df.assign(_bin=pd.cut(df[col], bins=bins, right=right))
+    out = binned.groupby(["_bin", *by], observed=True).size().rename("tracks").reset_index()
+    out["start"], out["end"] = [i.left for i in out._bin], [i.right for i in out._bin]
+    return out.drop(columns="_bin")
+
+
 try:
     tracks = load_tracks()
     audit = load_table("audit_steps", "ord")
@@ -110,8 +118,8 @@ elif page == "Explore":
 
     feat = st.selectbox("Feature", FEATS + ["popularity", "duration_s"], index=1)
     st.altair_chart(
-        alt.Chart(v).mark_bar(opacity=0.75).encode(
-            x=alt.X(f"{feat}:Q", bin=alt.Bin(maxbins=40)), y=alt.Y("count():Q", stack=None, title="Tracks"),
+        alt.Chart(hist_counts(v, feat, 40, ["genre_family"])).mark_bar(opacity=0.75).encode(
+            x=alt.X("start:Q", bin="binned", title=feat), x2="end:Q", y=alt.Y("tracks:Q", stack=None, title="Tracks"),
             color=alt.Color("genre_family:N", sort=FAMILIES, title="Family")).properties(height=320),
         width="stretch")
     st.dataframe(
@@ -125,8 +133,8 @@ elif page == "EDA findings":
 
     st.subheader("1 · Popularity is skewed, and the app's filters hide most artists")
     rules = pd.DataFrame({"x": [40, 62], "label": ["build_data.py cutoff", "swipe deck cutoff"]})
-    hist = alt.Chart(tr).mark_bar(color="#4c72b0").encode(
-        x=alt.X("popularity:Q", bin=alt.Bin(step=2), title="Spotify popularity"), y=alt.Y("count():Q", title="Tracks"))
+    hist = alt.Chart(hist_counts(tr, "popularity", range(0, 103, 2), right=False)).mark_bar(color="#4c72b0").encode(
+        x=alt.X("start:Q", bin="binned", title="Spotify popularity"), x2="end:Q", y=alt.Y("tracks:Q", title="Tracks"))
     st.altair_chart((hist + alt.Chart(rules).mark_rule(color="#c44e52", strokeDash=[5, 4], size=2).encode(x="x:Q", tooltip="label"))
                     .properties(height=280), width="stretch")
     ge40, ge62 = (tr.popularity >= 40).mean(), (tr.popularity >= 62).mean()
@@ -153,9 +161,12 @@ elif page == "EDA findings":
 
     st.subheader("3 · Features separate some genre families, not all")
     feat = st.selectbox("Feature", ["energy", "danceability", "valence", "acousticness", "instrumentalness", "speechiness"])
+    box = tr[tr.genre_family != "Other"].groupby("genre_family")[feat].describe().reset_index()
+    y = alt.Y("genre_family:N", sort=FAMILIES, title=None)
     st.altair_chart(
-        alt.Chart(tr[tr.genre_family != "Other"]).mark_boxplot(extent="min-max", color="#8da0cb").encode(
-            x=alt.X(f"{feat}:Q"), y=alt.Y("genre_family:N", sort=FAMILIES, title=None)).properties(height=330),
+        (alt.Chart(box).mark_rule(color="#8da0cb").encode(x=alt.X("min:Q", title=feat), x2="max:Q", y=y)
+         + alt.Chart(box).mark_bar(color="#8da0cb", size=14).encode(x="25%:Q", x2="75%:Q", y=y)
+         + alt.Chart(box).mark_tick(color="white", size=14, thickness=2).encode(x="50%:Q", y=y)).properties(height=330),
         width="stretch")
     st.markdown(
         "Metal (high energy, near-zero acousticness) and Jazz & Classical / Chill & Acoustic (low energy, high acousticness) "

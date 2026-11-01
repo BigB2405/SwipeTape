@@ -1,10 +1,10 @@
 # D2 Data Note: SwipeTape (Group 10)
 
-**Repository:** _<GitHub URL>_ · **Tag:** `d2` · **Dashboard (Modal):** _<URL>_
+**Repository:** https://github.com/BigB2405/SwipeTape · **Tag:** `d2-final` · **Dashboard (Modal):** https://bigb2405--swipetape-dashboard-dashboard.us-east.modal.run
 **Research question (D1):** Can shared musical features among songs a user likes or dislikes improve the quality of the personalized playlist produced by a swipe-based recommender?
 
 ## 1. Source and access
-We use the **Spotify Tracks Dataset** on Kaggle (maharshipandya, 2022): 114,000 rows × 21 columns, collected from the Spotify Web API by searching 114 genre keywords and keeping 1,000 tracks for each. Anyone can download it with a free Kaggle account. The README explains where to put `dataset.csv`, and raw data is not committed. _(TODO: confirm the license listed on the Kaggle page.)_ Spotify stopped giving new apps access to its audio-features endpoint in Nov 2024, so this file is a fixed snapshot that we can't refresh or extend with the same features.
+We use the **Spotify Tracks Dataset** on Kaggle (maharshipandya, 2022): 114,000 rows × 21 columns, collected from the Spotify Web API by searching 114 genre keywords and keeping 1,000 tracks for each. Anyone can download it with a free Kaggle account. The README explains where to put `dataset.csv`, and raw data is not committed. Kaggle lists the license as "Database: Open Database, Contents: © Original Authors" (ODbL 1.0 for the database; the track contents stay with their original authors). Spotify stopped giving new apps access to its audio-features endpoint in Nov 2024, so this file is a fixed snapshot that we can't refresh or extend with the same features.
 
 **Labels.** There are no real user swipes, so D3–D6 evaluate against a **genre proxy**. A simulated listener is a set of seed tracks from one genre, and a recommendation counts as a hit if it shares a genre with the seeds. The baseline is popularity ranking. The unit of observation is one track.
 
@@ -55,4 +55,4 @@ The cleaned train and validation tracks plus the audit tables live in **Supabase
 
 **D3 plan:** baseline = popularity ranking. Candidates = (a) cosine kNN on standardized features (the app's current approach), (b) kNN on PCA-decorrelated features, (c) logistic regression or random forest that predicts genre from features. All of them are scored with precision@10 on validation users built from held-out artists.
 
-_Contributions: <member: tasks>. AI assistance: Claude Code helped draft the preparation, plotting, and dashboard code and this note. The group reviewed and ran all of it._
+_Contributions: Devanshi Parmar: data preparation, plotting, data dictionary, dashboard code, and the first draft of this note. Britain Russell: Supabase setup and data load, Modal deployment, dashboard chart fix, and finalizing this note. AI assistance: Claude Code helped draft the preparation, plotting, and dashboard code and this note. The group reviewed and ran all of it._
