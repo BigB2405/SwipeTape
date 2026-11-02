@@ -1,0 +1,19 @@
+[project]
+name = "swipetape"
+version = "0.2.0"
+description = "SwipeTape: swipe-based music discovery (DTSC 3602, Group 10)"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "pandas>=2.2",
+    "pyarrow>=16",
+    "scikit-learn>=1.5",
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+    "streamlit>=1.40",
+    "supabase>=2.10",
+    "python-dotenv>=1.0",
+    "modal>=0.73",
+]
+
+[tool.uv]
+package = false
