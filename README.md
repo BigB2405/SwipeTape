@@ -48,6 +48,8 @@ The project combines a curated music dataset, client-side recommendation logic, 
 uv sync                                         # Python env (pyproject.toml)
 uv run python scripts/prepare_data.py           # audit + clean + split -> data/processed/
 uv run python scripts/make_plots.py             # EDA figures -> reports/figures/
+uv run --frozen python scripts/evaluate.py      # D3 model comparison -> reports/d3_*.json/csv/md
+uv run --frozen python scripts/plot_d3.py       # D3 figures -> reports/figures/d3_*.png
 uv run python scripts/build_data.py             # (app) regenerate public/songs.json
 ```
 
