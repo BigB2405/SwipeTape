@@ -1,44 +1,526 @@
 {
   "protocol": {
-    "k": 10,
+    "primary": "held-out songs: Recall@50 (normalized by min(|held|, 50))",
     "n_seed": 5,
-    "episodes_per_genre": 5,
-    "artist_cap": 2,
+    "mixed_seeds": "3 + 3",
+    "min_artist_tracks": 8,
+    "min_held": 3,
     "seed": 42,
-    "n_users": 560,
+    "n_users": 768,
+    "n_single": 368,
+    "n_mixed": 400,
     "val_tracks": 11612,
     "train_tracks": 57801,
-    "bootstrap": 2000
+    "bootstrap": 2000,
+    "chance_r50": 0.0043,
+    "genre_protocol_users": 560
   },
-  "tuning_train_cv_p10": {
-    "M1d lam=0.15": 0.0966,
-    "M1d lam=0.3": 0.0835,
-    "M1d lam=0.5": 0.0696,
-    "M1d lam=1.0": 0.038,
-    "M2 pca=3": 0.0402,
-    "M2 pca=5": 0.0732,
-    "M2 pca=7": 0.0875,
-    "M2 pca=9": 0.102,
-    "M3 logreg C=0.01": 0.0857,
-    "M3 logreg C=1.0": 0.1066,
-    "M3 forest leaf=20": 0.1513,
-    "M3 forest leaf=50": 0.136
+  "tuning_train_cv_r50": {
+    "M1d lam=0.15": 0.0754,
+    "M1d lam=0.3": 0.0661,
+    "M1d lam=0.5": 0.0456,
+    "M1d lam=1.0": 0.0186,
+    "M3 forest leaf=10": 0.0681,
+    "M3 forest leaf=20": 0.0666,
+    "M3 forest leaf=50": 0.0609,
+    "M4 tau=0.03 lam=0": 0.0916,
+    "M4 tau=0.03 lam=0.15": 0.0786,
+    "M4 tau=0.03 lam=0.3": 0.0607,
+    "M4 tau=0.1 lam=0": 0.0941,
+    "M4 tau=0.1 lam=0.15": 0.0884,
+    "M4 tau=0.1 lam=0.3": 0.0712,
+    "M4 tau=0.3 lam=0": 0.0948,
+    "M4 tau=0.3 lam=0.15": 0.0906,
+    "M4 tau=0.3 lam=0.3": 0.0764,
+    "M4 tau=1.0 lam=0": 0.0863,
+    "M4 tau=1.0 lam=0.15": 0.0828,
+    "M4 tau=1.0 lam=0.3": 0.069,
+    "M5 alpha=0.5 leaf=10": 0.1157,
+    "M5 alpha=0.5 leaf=20": 0.1145,
+    "M5 alpha=0.5 leaf=50": 0.1116,
+    "M5 alpha=1.0 leaf=10": 0.1285,
+    "M5 alpha=1.0 leaf=20": 0.1242,
+    "M5 alpha=1.0 leaf=50": 0.1211,
+    "M5 alpha=2.0 leaf=10": 0.1333,
+    "M5 alpha=2.0 leaf=20": 0.1301,
+    "M5 alpha=2.0 leaf=50": 0.1249,
+    "M5 alpha=3.0 leaf=10": 0.1308,
+    "M5 alpha=3.0 leaf=20": 0.1276,
+    "M5 alpha=3.0 leaf=50": 0.1232,
+    "M5 alpha=4.0 leaf=10": 0.13,
+    "M5 alpha=4.0 leaf=20": 0.1246,
+    "M5 alpha=4.0 leaf=50": 0.1202
   },
   "chosen_configs": {
     "M1d": "M1d lam=0.15",
-    "M2": "M2 pca=9",
-    "M3": "M3 forest leaf=20"
+    "M3": "M3 forest leaf=10",
+    "M4": "M4 tau=0.3 lam=0",
+    "M5": "M5 alpha=2.0 leaf=10"
   },
-  "chance_p10": 0.0065,
   "validation": {
+    "B0 Random": {
+      "r50": 0.0036,
+      "r50_ci95": [
+        0.0025,
+        0.005
+      ],
+      "r10": 0.0012,
+      "mrr": 0.0087,
+      "hit10": 0.0117,
+      "r50_single": 0.003,
+      "r50_mixed": 0.0042,
+      "r50_other_album": 0.0035,
+      "both_tastes_served50": 0.0025,
+      "min_taste_r50": 0.0001
+    },
+    "B1 Popularity": {
+      "r50": 0.0074,
+      "r50_ci95": [
+        0.0048,
+        0.0104
+      ],
+      "r10": 0.0014,
+      "mrr": 0.01,
+      "hit10": 0.0143,
+      "r50_single": 0.0075,
+      "r50_mixed": 0.0074,
+      "r50_other_album": 0.0104,
+      "both_tastes_served50": 0.0025,
+      "min_taste_r50": 0.0002
+    },
+    "M1 Cosine centroid (app)": {
+      "r50": 0.0855,
+      "r50_ci95": [
+        0.0754,
+        0.0954
+      ],
+      "r10": 0.0455,
+      "mrr": 0.1076,
+      "hit10": 0.2109,
+      "r50_single": 0.1278,
+      "r50_mixed": 0.0466,
+      "r50_other_album": 0.0732,
+      "both_tastes_served50": 0.035,
+      "min_taste_r50": 0.0025
+    },
+    "M1d lam=0.15": {
+      "r50": 0.0851,
+      "r50_ci95": [
+        0.075,
+        0.0956
+      ],
+      "r10": 0.0411,
+      "mrr": 0.1042,
+      "hit10": 0.2109,
+      "r50_single": 0.1298,
+      "r50_mixed": 0.0439,
+      "r50_other_album": 0.0751,
+      "both_tastes_served50": 0.045,
+      "min_taste_r50": 0.0038
+    },
+    "M4 tau=0.3 lam=0": {
+      "r50": 0.108,
+      "r50_ci95": [
+        0.0972,
+        0.1185
+      ],
+      "r10": 0.0672,
+      "mrr": 0.1506,
+      "hit10": 0.319,
+      "r50_single": 0.1388,
+      "r50_mixed": 0.0796,
+      "r50_other_album": 0.0865,
+      "both_tastes_served50": 0.06,
+      "min_taste_r50": 0.0052
+    },
+    "M3 forest leaf=10": {
+      "r50": 0.0897,
+      "r50_ci95": [
+        0.08,
+        0.0998
+      ],
+      "r10": 0.036,
+      "mrr": 0.0912,
+      "hit10": 0.1901,
+      "r50_single": 0.1085,
+      "r50_mixed": 0.0724,
+      "r50_other_album": 0.0852,
+      "both_tastes_served50": 0.03,
+      "min_taste_r50": 0.0027
+    },
+    "M5 alpha=2.0 leaf=10": {
+      "r50": 0.1392,
+      "r50_ci95": [
+        0.1272,
+        0.1511
+      ],
+      "r10": 0.0867,
+      "mrr": 0.2013,
+      "hit10": 0.3906,
+      "r50_single": 0.1877,
+      "r50_mixed": 0.0945,
+      "r50_other_album": 0.1205,
+      "both_tastes_served50": 0.1175,
+      "min_taste_r50": 0.0112
+    },
+    "M4 ablation lam=0.3": {
+      "r50": 0.0971,
+      "r50_ci95": [
+        0.0878,
+        0.1078
+      ],
+      "r10": 0.0553,
+      "mrr": 0.1417,
+      "hit10": 0.2747,
+      "r50_single": 0.1244,
+      "r50_mixed": 0.072,
+      "r50_other_album": 0.0791,
+      "both_tastes_served50": 0.0475,
+      "min_taste_r50": 0.0051
+    }
+  },
+  "paired_vs_popularity": {
+    "M1 Cosine centroid (app)": {
+      "mean_diff": 0.0781,
+      "ci95": [
+        0.0665,
+        0.0895
+      ],
+      "wilcoxon_p": 1.61e-55
+    },
+    "M1d lam=0.15": {
+      "mean_diff": 0.0776,
+      "ci95": [
+        0.0667,
+        0.0889
+      ],
+      "wilcoxon_p": 9.65e-54
+    },
+    "M4 tau=0.3 lam=0": {
+      "mean_diff": 0.1005,
+      "ci95": [
+        0.0886,
+        0.1126
+      ],
+      "wilcoxon_p": 2.53e-76
+    },
+    "M3 forest leaf=10": {
+      "mean_diff": 0.0823,
+      "ci95": [
+        0.0721,
+        0.0927
+      ],
+      "wilcoxon_p": 1.95e-58
+    },
+    "M5 alpha=2.0 leaf=10": {
+      "mean_diff": 0.1317,
+      "ci95": [
+        0.1195,
+        0.1441
+      ],
+      "wilcoxon_p": 1.23e-91
+    }
+  },
+  "paired_vs_best": {
+    "M1 Cosine centroid (app)": {
+      "mean_diff": -0.0537,
+      "ci95": [
+        -0.0621,
+        -0.0451
+      ],
+      "wilcoxon_p": 1.73e-34
+    },
+    "M1d lam=0.15": {
+      "mean_diff": -0.0541,
+      "ci95": [
+        -0.0632,
+        -0.0451
+      ],
+      "wilcoxon_p": 3.92e-34
+    },
+    "M4 tau=0.3 lam=0": {
+      "mean_diff": -0.0312,
+      "ci95": [
+        -0.0393,
+        -0.0234
+      ],
+      "wilcoxon_p": 1.03e-15
+    },
+    "M3 forest leaf=10": {
+      "mean_diff": -0.0495,
+      "ci95": [
+        -0.0606,
+        -0.0388
+      ],
+      "wilcoxon_p": 1.73e-17
+    }
+  },
+  "dislike_effect": {
+    "M1d_minus_M1": {
+      "mean_diff": -0.0004,
+      "ci95": [
+        -0.0054,
+        0.0051
+      ],
+      "wilcoxon_p": 0.502
+    },
+    "M4_with_vs_without": {
+      "mean_diff": -0.0108,
+      "ci95": [
+        -0.0185,
+        -0.0031
+      ],
+      "wilcoxon_p": 0.00482
+    },
+    "M4_chosen_lam": 0
+  },
+  "mixed_taste_knn_minus_centroid": {
+    "mean_diff": 0.033,
+    "ci95": [
+      0.0251,
+      0.0412
+    ],
+    "wilcoxon_p": 1.19e-14
+  },
+  "best_by_r50": "M5 alpha=2.0 leaf=10",
+  "selected": "M5 alpha=2.0 leaf=10",
+  "error_by_family": {
+    "Chill & Acoustic": {
+      "n_users": 33,
+      "B0 Random": 0.0049,
+      "B1 Popularity": 0.0046,
+      "M1 Cosine centroid (app)": 0.1473,
+      "M1d lam=0.15": 0.1556,
+      "M4 tau=0.3 lam=0": 0.1485,
+      "M3 forest leaf=10": 0.1736,
+      "M5 alpha=2.0 leaf=10": 0.261
+    },
+    "Country & Roots": {
+      "n_users": 13,
+      "B0 Random": 0.0256,
+      "B1 Popularity": 0.0,
+      "M1 Cosine centroid (app)": 0.0508,
+      "M1d lam=0.15": 0.073,
+      "M4 tau=0.3 lam=0": 0.1014,
+      "M3 forest leaf=10": 0.1099,
+      "M5 alpha=2.0 leaf=10": 0.0929
+    },
+    "Electronic": {
+      "n_users": 70,
+      "B0 Random": 0.0012,
+      "B1 Popularity": 0.0219,
+      "M1 Cosine centroid (app)": 0.1056,
+      "M1d lam=0.15": 0.1083,
+      "M4 tau=0.3 lam=0": 0.1129,
+      "M3 forest leaf=10": 0.1009,
+      "M5 alpha=2.0 leaf=10": 0.1874
+    },
+    "Hip-Hop & R&B": {
+      "n_users": 16,
+      "B0 Random": 0.0027,
+      "B1 Popularity": 0.0027,
+      "M1 Cosine centroid (app)": 0.1232,
+      "M1d lam=0.15": 0.1174,
+      "M4 tau=0.3 lam=0": 0.1293,
+      "M3 forest leaf=10": 0.0718,
+      "M5 alpha=2.0 leaf=10": 0.148
+    },
+    "Jazz & Classical": {
+      "n_users": 10,
+      "B0 Random": 0.0163,
+      "B1 Popularity": 0.0,
+      "M1 Cosine centroid (app)": 0.1946,
+      "M1d lam=0.15": 0.1656,
+      "M4 tau=0.3 lam=0": 0.1783,
+      "M3 forest leaf=10": 0.1226,
+      "M5 alpha=2.0 leaf=10": 0.2044
+    },
+    "Latin": {
+      "n_users": 42,
+      "B0 Random": 0.0018,
+      "B1 Popularity": 0.0,
+      "M1 Cosine centroid (app)": 0.1645,
+      "M1d lam=0.15": 0.1667,
+      "M4 tau=0.3 lam=0": 0.1872,
+      "M3 forest leaf=10": 0.1761,
+      "M5 alpha=2.0 leaf=10": 0.2589
+    },
+    "Metal": {
+      "n_users": 30,
+      "B0 Random": 0.0014,
+      "B1 Popularity": 0.0,
+      "M1 Cosine centroid (app)": 0.1833,
+      "M1d lam=0.15": 0.1833,
+      "M4 tau=0.3 lam=0": 0.2022,
+      "M3 forest leaf=10": 0.1196,
+      "M5 alpha=2.0 leaf=10": 0.2426
+    },
+    "Other": {
+      "n_users": 14,
+      "B0 Random": 0.0,
+      "B1 Popularity": 0.0,
+      "M1 Cosine centroid (app)": 0.3557,
+      "M1d lam=0.15": 0.3619,
+      "M4 tau=0.3 lam=0": 0.3514,
+      "M3 forest leaf=10": 0.2439,
+      "M5 alpha=2.0 leaf=10": 0.3643
+    },
+    "Pop": {
+      "n_users": 57,
+      "B0 Random": 0.0,
+      "B1 Popularity": 0.0053,
+      "M1 Cosine centroid (app)": 0.0903,
+      "M1d lam=0.15": 0.0902,
+      "M4 tau=0.3 lam=0": 0.0976,
+      "M3 forest leaf=10": 0.0806,
+      "M5 alpha=2.0 leaf=10": 0.1368
+    },
+    "Rock": {
+      "n_users": 36,
+      "B0 Random": 0.0031,
+      "B1 Popularity": 0.0209,
+      "M1 Cosine centroid (app)": 0.0823,
+      "M1d lam=0.15": 0.0784,
+      "M4 tau=0.3 lam=0": 0.0852,
+      "M3 forest leaf=10": 0.0249,
+      "M5 alpha=2.0 leaf=10": 0.0908
+    },
+    "World": {
+      "n_users": 47,
+      "B0 Random": 0.0021,
+      "B1 Popularity": 0.0,
+      "M1 Cosine centroid (app)": 0.1,
+      "M1d lam=0.15": 0.1073,
+      "M4 tau=0.3 lam=0": 0.1199,
+      "M3 forest leaf=10": 0.0729,
+      "M5 alpha=2.0 leaf=10": 0.1579
+    }
+  },
+  "error_by_seed_popularity": {
+    "0-19": {
+      "n_users": 123,
+      "B0 Random": 0.0043,
+      "B1 Popularity": 0.0088,
+      "M1 Cosine centroid (app)": 0.1296,
+      "M1d lam=0.15": 0.1142,
+      "M4 tau=0.3 lam=0": 0.1516,
+      "M3 forest leaf=10": 0.1293,
+      "M5 alpha=2.0 leaf=10": 0.1881
+    },
+    "20-39": {
+      "n_users": 323,
+      "B0 Random": 0.0044,
+      "B1 Popularity": 0.0003,
+      "M1 Cosine centroid (app)": 0.0898,
+      "M1d lam=0.15": 0.0867,
+      "M4 tau=0.3 lam=0": 0.1175,
+      "M3 forest leaf=10": 0.0921,
+      "M5 alpha=2.0 leaf=10": 0.1378
+    },
+    "40-61": {
+      "n_users": 280,
+      "B0 Random": 0.0028,
+      "B1 Popularity": 0.0072,
+      "M1 Cosine centroid (app)": 0.0663,
+      "M1d lam=0.15": 0.0692,
+      "M4 tau=0.3 lam=0": 0.0821,
+      "M3 forest leaf=10": 0.0756,
+      "M5 alpha=2.0 leaf=10": 0.1222
+    },
+    "62+": {
+      "n_users": 42,
+      "B0 Random": 0.0015,
+      "B1 Popularity": 0.0597,
+      "M1 Cosine centroid (app)": 0.0513,
+      "M1d lam=0.15": 0.093,
+      "M4 tau=0.3 lam=0": 0.0793,
+      "M3 forest leaf=10": 0.049,
+      "M5 alpha=2.0 leaf=10": 0.1198
+    }
+  },
+  "error_by_kind": {
+    "mixed": {
+      "n_users": 400,
+      "B0 Random": 0.0042,
+      "B1 Popularity": 0.0074,
+      "M1 Cosine centroid (app)": 0.0466,
+      "M1d lam=0.15": 0.0439,
+      "M4 tau=0.3 lam=0": 0.0796,
+      "M3 forest leaf=10": 0.0724,
+      "M5 alpha=2.0 leaf=10": 0.0945
+    },
+    "single": {
+      "n_users": 368,
+      "B0 Random": 0.003,
+      "B1 Popularity": 0.0075,
+      "M1 Cosine centroid (app)": 0.1278,
+      "M1d lam=0.15": 0.1298,
+      "M4 tau=0.3 lam=0": 0.1388,
+      "M3 forest leaf=10": 0.1085,
+      "M5 alpha=2.0 leaf=10": 0.1877
+    }
+  },
+  "error_other_album_r50": {
+    "mixed": {
+      "n_users": 400,
+      "B0 Random": 0.0043,
+      "B1 Popularity": 0.0085,
+      "M1 Cosine centroid (app)": 0.0413,
+      "M1d lam=0.15": 0.0383,
+      "M4 tau=0.3 lam=0": 0.0652,
+      "M3 forest leaf=10": 0.0679,
+      "M5 alpha=2.0 leaf=10": 0.0741
+    },
+    "single": {
+      "n_users": 368,
+      "B0 Random": 0.0025,
+      "B1 Popularity": 0.0126,
+      "M1 Cosine centroid (app)": 0.1112,
+      "M1d lam=0.15": 0.1188,
+      "M4 tau=0.3 lam=0": 0.1119,
+      "M3 forest leaf=10": 0.1059,
+      "M5 alpha=2.0 leaf=10": 0.1758
+    }
+  },
+  "cold_start_r50": {
+    "1": {
+      "n_users": 369,
+      "B0 Random": 0.0044,
+      "B1 Popularity": 0.0075,
+      "M1 Cosine centroid (app)": 0.0881,
+      "M1d lam=0.15": 0.0857,
+      "M4 tau=0.3 lam=0": 0.0881,
+      "M3 forest leaf=10": 0.0737,
+      "M5 alpha=2.0 leaf=10": 0.1172
+    },
+    "3": {
+      "n_users": 369,
+      "B0 Random": 0.0034,
+      "B1 Popularity": 0.006,
+      "M1 Cosine centroid (app)": 0.1109,
+      "M1d lam=0.15": 0.1078,
+      "M4 tau=0.3 lam=0": 0.1275,
+      "M3 forest leaf=10": 0.094,
+      "M5 alpha=2.0 leaf=10": 0.1793
+    },
+    "5": {
+      "n_users": 369,
+      "B0 Random": 0.002,
+      "B1 Popularity": 0.0075,
+      "M1 Cosine centroid (app)": 0.1297,
+      "M1d lam=0.15": 0.1246,
+      "M4 tau=0.3 lam=0": 0.1395,
+      "M3 forest leaf=10": 0.1062,
+      "M5 alpha=2.0 leaf=10": 0.1946
+    }
+  },
+  "secondary_genre_protocol": {
     "B0 Random": {
       "p10": 0.0055,
       "p10_ci95": [
         0.0038,
         0.0075
       ],
-      "ndcg10": 0.0057,
-      "hit10": 0.0554,
       "family_p10": 0.1236,
       "rec_pop_median": 36.0,
       "coverage": 0.3811
@@ -46,23 +528,19 @@
     "B1 Popularity": {
       "p10": 0.0137,
       "p10_ci95": [
-        0.0091,
-        0.0196
+        0.0088,
+        0.0193
       ],
-      "ndcg10": 0.0133,
-      "hit10": 0.0714,
       "family_p10": 0.2098,
       "rec_pop_median": 92.0,
       "coverage": 0.001
     },
-    "M1 Cosine (app weights)": {
+    "M1 Cosine centroid (app)": {
       "p10": 0.0838,
       "p10_ci95": [
-        0.0723,
-        0.0975
+        0.0716,
+        0.0971
       ],
-      "ndcg10": 0.0851,
-      "hit10": 0.4089,
       "family_p10": 0.3352,
       "rec_pop_median": 36.0,
       "coverage": 0.3359
@@ -70,416 +548,42 @@
     "M1d lam=0.15": {
       "p10": 0.0868,
       "p10_ci95": [
-        0.0755,
-        0.0993
+        0.0752,
+        0.1002
       ],
-      "ndcg10": 0.0878,
-      "hit10": 0.4357,
       "family_p10": 0.3434,
       "rec_pop_median": 36.0,
       "coverage": 0.3389
     },
-    "M2 pca=9": {
-      "p10": 0.0827,
+    "M4 tau=0.3 lam=0": {
+      "p10": 0.0863,
       "p10_ci95": [
-        0.0704,
-        0.0952
+        0.0745,
+        0.0987
       ],
-      "ndcg10": 0.0846,
-      "hit10": 0.4143,
-      "family_p10": 0.3384,
+      "family_p10": 0.3279,
       "rec_pop_median": 37.0,
-      "coverage": 0.3461
+      "coverage": 0.3161
     },
-    "M3 forest leaf=20": {
-      "p10": 0.1411,
+    "M3 forest leaf=10": {
+      "p10": 0.1529,
       "p10_ci95": [
-        0.1202,
-        0.162
+        0.1321,
+        0.1745
       ],
-      "ndcg10": 0.1449,
-      "hit10": 0.375,
-      "family_p10": 0.3841,
+      "family_p10": 0.3979,
       "rec_pop_median": 30.0,
-      "coverage": 0.074
+      "coverage": 0.077
     },
-    "Oracle (leaks label)": {
-      "p10": 0.9973,
+    "M5 alpha=2.0 leaf=10": {
+      "p10": 0.0968,
       "p10_ci95": [
-        0.995,
-        0.9993
+        0.0843,
+        0.11
       ],
-      "ndcg10": 0.9982,
-      "hit10": 1.0,
-      "family_p10": 0.9979,
-      "rec_pop_median": 59.0,
-      "coverage": 0.1156
-    }
-  },
-  "paired_vs_popularity": {
-    "M1 Cosine (app weights)": {
-      "mean_diff": 0.07,
-      "ci95": [
-        0.0564,
-        0.0841
-      ],
-      "wilcoxon_p": 2.5e-27
-    },
-    "M1d lam=0.15": {
-      "mean_diff": 0.073,
-      "ci95": [
-        0.0593,
-        0.0873
-      ],
-      "wilcoxon_p": 2.71e-30
-    },
-    "M2 pca=9": {
-      "mean_diff": 0.0689,
-      "ci95": [
-        0.0552,
-        0.0823
-      ],
-      "wilcoxon_p": 2.94e-28
-    },
-    "M3 forest leaf=20": {
-      "mean_diff": 0.1273,
-      "ci95": [
-        0.1064,
-        0.1502
-      ],
-      "wilcoxon_p": 6.28e-25
-    }
-  },
-  "paired_vs_best": {
-    "M1 Cosine (app weights)": {
-      "mean_diff": -0.0573,
-      "ci95": [
-        -0.0754,
-        -0.042
-      ],
-      "wilcoxon_p": 0.000354
-    },
-    "M1d lam=0.15": {
-      "mean_diff": -0.0543,
-      "ci95": [
-        -0.0712,
-        -0.038
-      ],
-      "wilcoxon_p": 0.00948
-    },
-    "M2 pca=9": {
-      "mean_diff": -0.0584,
-      "ci95": [
-        -0.0755,
-        -0.0421
-      ],
-      "wilcoxon_p": 8.92e-05
-    }
-  },
-  "dislike_effect_M1d_minus_M1": {
-    "mean_diff": 0.003,
-    "ci95": [
-      -0.0032,
-      0.0091
-    ],
-    "wilcoxon_p": 0.178
-  },
-  "best_by_p10": "M3 forest leaf=20",
-  "selected": "M3 forest leaf=20",
-  "error_by_family": {
-    "Chill & Acoustic": {
-      "n_users": 55,
-      "B0 Random": 0.0055,
-      "B1 Popularity": 0.0127,
-      "M1 Cosine (app weights)": 0.0964,
-      "M1d lam=0.15": 0.1036,
-      "M2 pca=9": 0.1145,
-      "M3 forest leaf=20": 0.2255
-    },
-    "Country & Roots": {
-      "n_users": 20,
-      "B0 Random": 0.0,
-      "B1 Popularity": 0.0,
-      "M1 Cosine (app weights)": 0.055,
-      "M1d lam=0.15": 0.05,
-      "M2 pca=9": 0.05,
-      "M3 forest leaf=20": 0.05
-    },
-    "Electronic": {
-      "n_users": 100,
-      "B0 Random": 0.007,
-      "B1 Popularity": 0.013,
-      "M1 Cosine (app weights)": 0.111,
-      "M1d lam=0.15": 0.109,
-      "M2 pca=9": 0.111,
-      "M3 forest leaf=20": 0.149
-    },
-    "Hip-Hop & R&B": {
-      "n_users": 30,
-      "B0 Random": 0.0033,
-      "B1 Popularity": 0.0167,
-      "M1 Cosine (app weights)": 0.0367,
-      "M1d lam=0.15": 0.0367,
-      "M2 pca=9": 0.05,
-      "M3 forest leaf=20": 0.0733
-    },
-    "Jazz & Classical": {
-      "n_users": 20,
-      "B0 Random": 0.0,
-      "B1 Popularity": 0.0,
-      "M1 Cosine (app weights)": 0.105,
-      "M1d lam=0.15": 0.125,
-      "M2 pca=9": 0.07,
-      "M3 forest leaf=20": 0.175
-    },
-    "Latin": {
-      "n_users": 60,
-      "B0 Random": 0.0067,
-      "B1 Popularity": 0.03,
-      "M1 Cosine (app weights)": 0.06,
-      "M1d lam=0.15": 0.0633,
-      "M2 pca=9": 0.0683,
-      "M3 forest leaf=20": 0.2433
-    },
-    "Metal": {
-      "n_users": 40,
-      "B0 Random": 0.0075,
-      "B1 Popularity": 0.0,
-      "M1 Cosine (app weights)": 0.15,
-      "M1d lam=0.15": 0.1475,
-      "M2 pca=9": 0.1175,
-      "M3 forest leaf=20": 0.1775
-    },
-    "Other": {
-      "n_users": 20,
-      "B0 Random": 0.02,
-      "B1 Popularity": 0.0,
-      "M1 Cosine (app weights)": 0.265,
-      "M1d lam=0.15": 0.265,
-      "M2 pca=9": 0.27,
-      "M3 forest leaf=20": 0.305
-    },
-    "Pop": {
-      "n_users": 75,
-      "B0 Random": 0.008,
-      "B1 Popularity": 0.0387,
-      "M1 Cosine (app weights)": 0.072,
-      "M1d lam=0.15": 0.0827,
-      "M2 pca=9": 0.0693,
-      "M3 forest leaf=20": 0.14
-    },
-    "Rock": {
-      "n_users": 75,
-      "B0 Random": 0.0013,
-      "B1 Popularity": 0.0013,
-      "M1 Cosine (app weights)": 0.0387,
-      "M1d lam=0.15": 0.0493,
-      "M2 pca=9": 0.0373,
-      "M3 forest leaf=20": 0.0507
-    },
-    "World": {
-      "n_users": 65,
-      "B0 Random": 0.0031,
-      "B1 Popularity": 0.0062,
-      "M1 Cosine (app weights)": 0.0462,
-      "M1d lam=0.15": 0.0385,
-      "M2 pca=9": 0.0431,
-      "M3 forest leaf=20": 0.0446
-    }
-  },
-  "error_by_seed_popularity": {
-    "0-19": {
-      "n_users": 86,
-      "B0 Random": 0.0047,
-      "B1 Popularity": 0.0116,
-      "M1 Cosine (app weights)": 0.093,
-      "M1d lam=0.15": 0.0988,
-      "M2 pca=9": 0.0884,
-      "M3 forest leaf=20": 0.1744
-    },
-    "20-39": {
-      "n_users": 196,
-      "B0 Random": 0.0071,
-      "B1 Popularity": 0.0005,
-      "M1 Cosine (app weights)": 0.1158,
-      "M1d lam=0.15": 0.124,
-      "M2 pca=9": 0.1194,
-      "M3 forest leaf=20": 0.2214
-    },
-    "40-61": {
-      "n_users": 219,
-      "B0 Random": 0.0055,
-      "B1 Popularity": 0.0073,
-      "M1 Cosine (app weights)": 0.0694,
-      "M1d lam=0.15": 0.0667,
-      "M2 pca=9": 0.0644,
-      "M3 forest leaf=20": 0.0922
-    },
-    "62+": {
-      "n_users": 59,
-      "B0 Random": 0.0017,
-      "B1 Popularity": 0.0847,
-      "M1 Cosine (app weights)": 0.0169,
-      "M1d lam=0.15": 0.0203,
-      "M2 pca=9": 0.0203,
-      "M3 forest leaf=20": 0.0068
-    }
-  },
-  "error_by_seed_coherence": {
-    "Q1 tight": {
-      "n_users": 140,
-      "B0 Random": 0.0043,
-      "B1 Popularity": 0.015,
-      "M1 Cosine (app weights)": 0.0971,
-      "M1d lam=0.15": 0.0979,
-      "M2 pca=9": 0.0871,
-      "M3 forest leaf=20": 0.1707
-    },
-    "Q2": {
-      "n_users": 140,
-      "B0 Random": 0.0064,
-      "B1 Popularity": 0.0214,
-      "M1 Cosine (app weights)": 0.1014,
-      "M1d lam=0.15": 0.0943,
-      "M2 pca=9": 0.0921,
-      "M3 forest leaf=20": 0.1357
-    },
-    "Q3": {
-      "n_users": 140,
-      "B0 Random": 0.005,
-      "B1 Popularity": 0.015,
-      "M1 Cosine (app weights)": 0.0564,
-      "M1d lam=0.15": 0.0643,
-      "M2 pca=9": 0.065,
-      "M3 forest leaf=20": 0.1186
-    },
-    "Q4 spread": {
-      "n_users": 140,
-      "B0 Random": 0.0064,
-      "B1 Popularity": 0.0036,
-      "M1 Cosine (app weights)": 0.08,
-      "M1d lam=0.15": 0.0907,
-      "M2 pca=9": 0.0864,
-      "M3 forest leaf=20": 0.1393
-    }
-  },
-  "misses_selected": {
-    "total": 4810,
-    "same_family_share": 0.283,
-    "top_confusions": [
-      {
-        "target": "death-metal",
-        "recommended_primary": "grindcore",
-        "n": 34
-      },
-      {
-        "target": "samba",
-        "recommended_primary": "pagode",
-        "n": 28
-      },
-      {
-        "target": "electro",
-        "recommended_primary": "study",
-        "n": 25
-      },
-      {
-        "target": "hardcore",
-        "recommended_primary": "hardstyle",
-        "n": 25
-      },
-      {
-        "target": "black-metal",
-        "recommended_primary": "grindcore",
-        "n": 23
-      },
-      {
-        "target": "detroit-techno",
-        "recommended_primary": "chicago-house",
-        "n": 23
-      },
-      {
-        "target": "chicago-house",
-        "recommended_primary": "detroit-techno",
-        "n": 22
-      },
-      {
-        "target": "disney",
-        "recommended_primary": "sleep",
-        "n": 22
-      },
-      {
-        "target": "trip-hop",
-        "recommended_primary": "study",
-        "n": 22
-      },
-      {
-        "target": "afrobeat",
-        "recommended_primary": "salsa",
-        "n": 21
-      },
-      {
-        "target": "j-pop",
-        "recommended_primary": "party",
-        "n": 21
-      },
-      {
-        "target": "bluegrass",
-        "recommended_primary": "honky-tonk",
-        "n": 20
-      },
-      {
-        "target": "french",
-        "recommended_primary": "comedy",
-        "n": 20
-      },
-      {
-        "target": "happy",
-        "recommended_primary": "drum-and-bass",
-        "n": 19
-      },
-      {
-        "target": "latin",
-        "recommended_primary": "party",
-        "n": 19
-      }
-    ]
-  },
-  "cold_start_p10": {
-    "1": {
-      "n_users": 560,
-      "B0 Random": 0.0084,
-      "B1 Popularity": 0.0175,
-      "M1 Cosine (app weights)": 0.0771,
-      "M1d lam=0.15": 0.0702,
-      "M2 pca=9": 0.0734,
-      "M3 forest leaf=20": 0.1202
-    },
-    "3": {
-      "n_users": 560,
-      "B0 Random": 0.0095,
-      "B1 Popularity": 0.0154,
-      "M1 Cosine (app weights)": 0.0843,
-      "M1d lam=0.15": 0.0816,
-      "M2 pca=9": 0.0804,
-      "M3 forest leaf=20": 0.1345
-    },
-    "5": {
-      "n_users": 560,
-      "B0 Random": 0.0073,
-      "B1 Popularity": 0.0141,
-      "M1 Cosine (app weights)": 0.0846,
-      "M1d lam=0.15": 0.077,
-      "M2 pca=9": 0.0827,
-      "M3 forest leaf=20": 0.1373
-    },
-    "10": {
-      "n_users": 559,
-      "B0 Random": 0.0038,
-      "B1 Popularity": 0.0098,
-      "M1 Cosine (app weights)": 0.0712,
-      "M1d lam=0.15": 0.0707,
-      "M2 pca=9": 0.0789,
-      "M3 forest leaf=20": 0.1336
+      "family_p10": 0.3355,
+      "rec_pop_median": 37.0,
+      "coverage": 0.2894
     }
   }
 }

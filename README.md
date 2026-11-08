@@ -48,8 +48,9 @@ The project combines a curated music dataset, client-side recommendation logic, 
 uv sync                                         # Python env (pyproject.toml)
 uv run python scripts/prepare_data.py           # audit + clean + split -> data/processed/
 uv run python scripts/make_plots.py             # EDA figures -> reports/figures/
-uv run --frozen python scripts/evaluate.py      # D3 model comparison -> reports/d3_*.json/csv/md
+uv run --frozen python scripts/evaluate.py      # D3 model comparison (~3 min) -> reports/d3_*.json/csv/md
 uv run --frozen python scripts/plot_d3.py       # D3 figures -> reports/figures/d3_*.png
+uv run --frozen python scripts/train_pipeline.py  # fit selected model -> artifacts/swipetape_pipeline.joblib + bundle.json
 uv run python scripts/build_data.py             # (app) regenerate public/songs.json
 ```
 
@@ -63,4 +64,14 @@ uv run modal secret create swipetape-supabase SUPABASE_URL=... SUPABASE_ANON_KEY
 uv run modal deploy dashboard/modal_app.py
 ```
 
-Docs: [`docs/data_dictionary.md`](docs/data_dictionary.md) · [`docs/D2_data_note.md`](docs/D2_data_note.md)
+## Model (D3)
+
+The recommender is song-to-song: `swipetape/model.py` defines a scikit-learn Pipeline of `SongEmbedder`, a custom transformer that combines standardized audio features with a random forest's predicted genre mix, and `SwipeRecommender`, which ranks songs by similarity to each liked song and allows at most 2 per artist. The saved artifact (~100 MB) is not committed. Rebuild it with `scripts/train_pipeline.py`. `artifacts/bundle.json` records the versions, parameters, and D3 validation score.
+
+```python
+import joblib
+pipe = joblib.load("artifacts/swipetape_pipeline.joblib")
+pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[...])
+```
+
+Docs: [`docs/data_dictionary.md`](docs/data_dictionary.md) · [`docs/D2_data_note.md`](docs/D2_data_note.md) · [`docs/D3_modeling_note.md`](docs/D3_modeling_note.md)
