@@ -1,0 +1,299 @@
+{
+  "info": {
+    "name": "SwipeTape API (D4)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Set baseUrl to the deployed Modal URL (no trailing slash). Run requests 1-7 in order (3 fills the ids that 4 uses)."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://REPLACE-WITH-YOUR-MODAL-URL.modal.run"
+    },
+    {
+      "key": "liked1",
+      "value": ""
+    },
+    {
+      "key": "liked2",
+      "value": ""
+    },
+    {
+      "key": "liked3",
+      "value": ""
+    },
+    {
+      "key": "disliked1",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1 Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"status ok and model loaded\", () => { const j = pm.response.json(); pm.expect(j.status).to.eql(\"ok\"); pm.expect(j.artifact_loaded).to.eql(true); });",
+              "pm.test(\"responds in under 5 s\", () => pm.expect(pm.response.responseTime).to.be.below(5000));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 Pipeline info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/pipeline/info",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pipeline",
+            "info"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"describes the artifact\", () => { const j = pm.response.json(); pm.expect(j.steps.map(s => s.name)).to.eql([\"embed\", \"rec\"]); pm.expect(j.steps[0].class).to.eql(\"SongEmbedder\"); pm.expect(j.sklearn_version).to.be.a(\"string\"); pm.expect(j.built_at).to.be.a(\"string\"); pm.expect(j.catalog_size).to.be.above(1000); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 Sample tracks (fills ids for the next request)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/sample?n=6&seed=1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "sample"
+          ],
+          "query": [
+            {
+              "key": "n",
+              "value": "6"
+            },
+            {
+              "key": "seed",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const t = pm.response.json().tracks;",
+              "pm.test(\"returns 6 tracks with ids\", () => { pm.expect(t.length).to.eql(6); t.forEach(x => pm.expect(x.track_id).to.match(/^[A-Za-z0-9]{22}$/)); });",
+              "pm.collectionVariables.set(\"liked1\", t[0].track_id); pm.collectionVariables.set(\"liked2\", t[1].track_id); pm.collectionVariables.set(\"liked3\", t[2].track_id); pm.collectionVariables.set(\"disliked1\", t[3].track_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 Recommend: valid request (200)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"{{liked1}}\",\n    \"{{liked2}}\",\n    \"{{liked3}}\"\n  ],\n  \"disliked_ids\": [\n    \"{{disliked1}}\"\n  ],\n  \"k\": 8\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const j = pm.response.json(); const liked = [pm.collectionVariables.get(\"liked1\"), pm.collectionVariables.get(\"liked2\"), pm.collectionVariables.get(\"liked3\"), pm.collectionVariables.get(\"disliked1\")];",
+              "pm.test(\"returns k=8 recommendations with the documented fields\", () => { pm.expect(j.k).to.eql(8); pm.expect(j.recommendations.length).to.eql(8); j.recommendations.forEach(r => { pm.expect(r).to.have.all.keys(\"track_id\", \"track_name\", \"artist\", \"score\", \"because_you_liked\"); }); });",
+              "pm.test(\"never recommends a swiped track\", () => j.recommendations.forEach(r => pm.expect(liked).to.not.include(r.track_id)));",
+              "pm.test(\"ranked best first and each pick is explained by a liked song\", () => { const s = j.recommendations.map(r => r.score); pm.expect(s).to.eql([...s].sort((a, b) => b - a)); j.recommendations.forEach(r => pm.expect(liked.slice(0, 3)).to.include(r.because_you_liked)); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 Recommend: empty liked_ids (422)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));",
+              "pm.test(\"explains the problem\", () => pm.expect(pm.response.json().detail).to.be.an(\"array\").that.is.not.empty);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 Recommend: k out of range (422)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"{{liked1}}\"\n  ],\n  \"k\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 Recommend: unknown track id (422)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"ZZZZZZZZZZZZZZZZZZZZZZ\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));",
+              "pm.test(\"names the unknown id\", () => pm.expect(JSON.stringify(pm.response.json())).to.include(\"unknown track ids\"));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
