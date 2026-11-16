@@ -29,7 +29,7 @@ The bundle is loaded **once, at import** of `serve.py`; nothing is re-fitted whi
 uv sync                                                    # first run `uv lock` once: D4 added fastapi, uvicorn, httpx to pyproject.toml
 uv run --frozen python scripts/prepare_data.py             # D2: cleaned data + split (data/raw/dataset.csv from Kaggle)
 uv run --frozen python scripts/train_pipeline.py           # fit M5 -> pipeline.joblib (about 1-2 min)
-uv run --frozen pytest -q tests                            # 4 logic tests; the HTTP tests need fastapi + httpx
+uv run --frozen --with pytest pytest -q tests                            # 4 logic tests; the HTTP tests need fastapi + httpx
 
 uv run uvicorn serve:app --reload                          # local API: http://localhost:8000/docs
 uv run --frozen python scripts/check_deployed.py --url http://127.0.0.1:8000

@@ -2,10 +2,10 @@
 
 Usage: uv run --frozen python scripts/train_pipeline.py
 Reads data/processed/tracks_clean.parquet (train + val = the serving catalog; test stays reserved).
-Writes artifacts/swipetape_pipeline.joblib and artifacts/bundle.json.
+Writes pipeline.joblib: a dict bundle {"pipeline": fitted Pipeline, "metadata": {...}} (HW4 format).
 
-    pipe = joblib.load("artifacts/swipetape_pipeline.joblib")
-    pipe.named_steps["rec"].recommend(liked_ids=[...], disliked_ids=[...])
+    bundle = joblib.load("pipeline.joblib")
+    bundle["pipeline"].named_steps["rec"].recommend(liked_ids=[...], disliked_ids=[...])
 """
 import json
 import platform
@@ -15,14 +15,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import joblib
+import numpy as np
 import pandas as pd
 import sklearn
 from sklearn.pipeline import Pipeline
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from swipetape.model import FEATS, SongEmbedder, SwipeRecommender  # noqa: E402
+from pipeline_def import FEATS, SongEmbedder, SwipeRecommender  # noqa: E402  (pickled by this module name)
 
-OUT = Path("artifacts")
+OUT = Path("pipeline.joblib")   # repo root, next to serve.py (gitignored; rebuild with this script)
 
 
 def selected_params():
@@ -45,21 +46,20 @@ def main():
                      ("rec", SwipeRecommender(tau=p["tau"], lam=p["lam"]))])
     pipe.fit(cat, rec__meta=cat)
 
-    OUT.mkdir(exist_ok=True)
-    path = OUT / "swipetape_pipeline.joblib"
-    joblib.dump(pipe, path, compress=3)
     sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
-    bundle = dict(
-        artifact=path.name, created_utc=datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        git_commit=sha, python=platform.python_version(), sklearn_version=sklearn.__version__,
-        joblib_version=joblib.__version__, pandas_version=pd.__version__,
+    metadata = dict(
+        steps=[{"name": n, "class": type(s).__name__} for n, s in pipe.steps],
+        built_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        sklearn_version=sklearn.__version__,
+        python_version=platform.python_version(), joblib_version=joblib.__version__,
+        pandas_version=pd.__version__, numpy_version=np.__version__, git_commit=sha,
         model=S["selected"], params=p, features=FEATS, catalog_size=len(cat),
-        artifact_mb=round(path.stat().st_size / 1e6, 1),
         d3_validation=dict(recall50=S["validation"][S["selected"]]["r50"],
                            recall50_ci95=S["validation"][S["selected"]]["r50_ci95"],
                            popularity_recall50=S["validation"]["B1 Popularity"]["r50"]))
-    (OUT / "bundle.json").write_text(json.dumps(bundle, indent=2) + "\n")
-    print(json.dumps(bundle, indent=2))
+    joblib.dump({"pipeline": pipe, "metadata": metadata}, OUT, compress=3)
+    print(json.dumps(metadata, indent=2))
+    print(f"wrote {OUT} ({OUT.stat().st_size / 1e6:.1f} MB)")
 
 
 if __name__ == "__main__":
