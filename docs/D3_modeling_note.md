@@ -3,7 +3,7 @@
 **Repository:** https://github.com/BigB2405/SwipeTape · **Branch/tag:** `D3` / `d3` · **Run:** `uv run --frozen python scripts/evaluate.py && uv run --frozen python scripts/plot_d3.py`
 **Research question:** Can shared musical features among songs a user likes or dislikes improve the quality of the personalized playlist produced by a swipe-based recommender?
 
-**What changed since the first D3 draft.** SwipeTape is a *song* recommender: after a few swipes, it should find specific songs that sound like the ones you liked. Our first draft scored a playlist by whether each song carried the listener's *genre label*. That rewarded a model that sorts songs into genre buckets (7% catalog coverage), not one that matches songs. We therefore changed the primary evaluation to a song-level test (below) and kept the genre test as a secondary check. Both sets of results are reported.
+**What changed since the first D3 draft.** SwipeTape is a *song* recommender: after a few swipes, it should find specific songs that sound like the ones you liked. Our first draft scored a playlist by whether each song carried the listener's *genre label*. That rewarded a model that sorts songs into genre buckets (7% catalog coverage), not one that matches songs. We therefore changed the primary evaluation to a song-level test (below), added two song-matching models (M4, M5), and kept the genre test as a secondary check. Because this redesign followed the first draft's validation results, **validation has been used twice** (see Leakage controls). Both sets of results are reported.
 
 ## 1. Evaluation design
 **Simulated listeners with held-out songs.** We have no real swipe logs, so we need a stand-in for "this listener would like *this* song" that the models cannot see. We use the listener's favorite artist's other songs:
@@ -19,7 +19,8 @@
 | Model knows the artist | Models get **only the 9 audio features**: no artist, album, genre, or popularity. |
 | Artist seen in training | The D2 split is grouped by artist (asserted), so scalers and forests never saw the held-out artists. |
 | Re-releases of a seed counted as a hit | Same-title songs by the seed artist (33 duplicates in val) are removed from the pool and the held-out set (asserted). |
-| Tuning on the comparison data | Every hyperparameter is tuned with 3-fold GroupKFold **by artist inside train**, using the same song-level protocol. Val is used once. |
+| Tuning on the comparison data | Every hyperparameter is tuned with 3-fold GroupKFold **by artist inside train**, using the same song-level protocol, never on val. |
+| Reusing validation | Val was used for the first draft's comparison (genre P@10, M3 selected). After seeing those results we redesigned the protocol and added M4/M5, then compared once more on val. So the val numbers below are not a fully untouched estimate, and the reserved test set (D6) is the only unbiased one. |
 | Test-set peeking | `test.parquet` is never opened (asserted). It is reserved for D6. |
 
 ## 2. Models
@@ -52,7 +53,7 @@ Two grid notes, disclosed: (1) After the first run, α = 2 was at the edge of th
 - **Not just album production.** Restricted to held-out songs from other albums, M5 still has Recall@50 of 0.121, against 0.139 overall.
 
 ## 4. Selection
-**The rule was fixed before looking at val:** take the highest Recall@50. If a simpler model's paired CI against it includes 0, take the simpler model instead. **M5 (α = 2, min_leaf = 10, τ = 0.3, λ = 0) is selected.** Every other candidate is significantly worse (all paired CIs exclude 0, p < 10⁻¹⁴).
+**The rule was fixed before this second validation run:** take the highest Recall@50. If a simpler model's paired CI against it includes 0, take the simpler model instead. **M5 (α = 2, min_leaf = 10, τ = 0.3, λ = 0) is selected.** Every other candidate is significantly worse (all paired CIs exclude 0, p < 10⁻¹⁴).
 
 Trade-offs we accept: M5's genre P@10 (0.097) is lower than M3's (0.153). That is the point of the change: M5 recommends songs that sound like your songs even when they carry a different genre tag. It also covers 29% of the catalog, against 8% for M3, so playlists are much less bucketed. In D4, M5 becomes a scikit-learn Pipeline: `SongEmbedder` (custom transformer: scaler + genre-mix forest) → `SwipeRecommender` (soft-max similarity ranking, 2-per-artist cap) in `swipetape/model.py`. D3's numbers come from that same code.
 
@@ -69,6 +70,8 @@ Trade-offs we accept: M5's genre P@10 (0.097) is lower than M3's (0.153). That i
 Shared audio features of liked songs **do** improve the playlist: the selected model finds a listener's held-out songs about **19× more often than the popularity ranking** (Recall@50 0.139 vs. 0.007) and 1.6× more often than the app's current centroid. Matching **song to song** matters most for listeners with more than one taste. The features of **disliked** songs added nothing, and a dislike penalty slightly hurt.
 
 Limitations:
+- **Validation was reused** (Section 1), so these numbers may be slightly optimistic. The D6 test run is the unbiased check.
+- **Listeners overlap.** Mixed-taste listeners reuse artists from the single-taste listeners, so the bootstrap CIs are slightly too narrow. The gaps between models are far larger than that.
 - **"Same artist" stands in for taste.** Real listeners like many artists, and an artist's songs are more alike than a listener's favorites. Absolute Recall values will not transfer to real users. The comparison between models is the claim, not the level.
 - **Simulated listeners and dislikes.** Dislikes come from clearly different families. Real dislikes are subtler, which may be why they don't help here.
 - **Only artists with ≥8 val tracks** are used as listeners, which over-represents prolific artists.
@@ -77,4 +80,4 @@ Limitations:
 - **One taste can crowd out another.** In a manual check with 3 metal likes and 2 jazz likes, all 10 picks were metal. In D5 we plan to fill the playlist round-robin across liked songs and will validate that on train-CV first.
 - **Test set untouched.** The frozen M5 and the popularity baseline will be scored once on `test.parquet` in D6, on both the song-level and genre tests.
 
-_Contributions: [to confirm with group]. AI assistance: Claude Code helped draft `swipetape/model.py`, `scripts/evaluate.py`, `scripts/plot_d3.py`, and this note. The group reviewed the code, ran it, and checked the numbers against `reports/d3_summary.json`._
+_Contributions: Britain Russell: evaluation design, model and evaluation code (`swipetape/model.py`, `scripts/evaluate.py`, `scripts/plot_d3.py`, `scripts/train_pipeline.py`), experiments, and the first versions of this note. Devanshi Parmar: code review, reproducing the results, and revising this note. AI assistance: Claude Code helped draft `swipetape/model.py`, `scripts/evaluate.py`, `scripts/plot_d3.py`, and this note, and helped review and reproduce the results. The group reviewed the code, ran it, and checked the numbers against `reports/d3_summary.json`._
