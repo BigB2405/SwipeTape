@@ -13,7 +13,7 @@ SwipeTape is a music discovery web app built around a Tinder-style swipe. Users 
 | Item | Link |
 |---|---|
 | Repository | https://github.com/BigB2405/SwipeTape |
-| Branch / tag | branch [`D3`](https://github.com/BigB2405/SwipeTape/tree/D3) · tag [`d3`](https://github.com/BigB2405/SwipeTape/tree/d3) |
+| Branch / tag | branch [`D3`](https://github.com/BigB2405/SwipeTape/tree/D3) · tag [`d3-final`](https://github.com/BigB2405/SwipeTape/tree/d3-final) |
 | Modeling note (3-page PDF for submission) | [`docs/D3_modeling_note.pdf`](docs/D3_modeling_note.pdf) |
 | Modeling note (full version) | [`docs/D3_modeling_note.md`](docs/D3_modeling_note.md) |
 | Evaluation code | [`scripts/evaluate.py`](scripts/evaluate.py) · [`scripts/plot_d3.py`](scripts/plot_d3.py) · [`swipetape/model.py`](swipetape/model.py) |
@@ -189,7 +189,7 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 |---|---|---|
 | D1 Proposal | Oct 21 | ✅ |
 | D2 Data preparation and EDA | Nov 2 | ✅ tag `d2-final` |
-| D3 Model evaluation | Nov 16 | ✅ tag `d3` |
+| D3 Model evaluation | Nov 16 | ✅ tag `d3-final` |
 | D4 Fitted scikit-learn pipeline + FastAPI on Modal | Nov 23 | planned |
 | D5 Vercel frontend calling the live API + Postman tests | Nov 30 | planned |
 | D6 Final report and demo (frozen model on reserved test data) | Dec 2 | planned |

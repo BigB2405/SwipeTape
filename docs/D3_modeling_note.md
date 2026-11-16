@@ -1,6 +1,6 @@
 # D3 Modeling Note: SwipeTape (Group 10)
 
-**Repository:** https://github.com/BigB2405/SwipeTape · **Branch/tag:** `D3` / `d3` · **Run:** `uv run --frozen python scripts/evaluate.py && uv run --frozen python scripts/plot_d3.py`
+**Repository:** https://github.com/BigB2405/SwipeTape · **Branch/tag:** `D3` / `d3-final` · **Run:** `uv run --frozen python scripts/evaluate.py && uv run --frozen python scripts/plot_d3.py`
 **Research question:** Can shared musical features among songs a user likes or dislikes improve the quality of the personalized playlist produced by a swipe-based recommender?
 
 **What changed since the first D3 draft.** SwipeTape is a *song* recommender: after a few swipes, it should find specific songs that sound like the ones you liked. Our first draft scored a playlist by whether each song carried the listener's *genre label*. That rewarded a model that sorts songs into genre buckets (7% catalog coverage), not one that matches songs. We therefore changed the primary evaluation to a song-level test (below), added two song-matching models (M4, M5), and kept the genre test as a secondary check. Because this redesign followed the first draft's validation results, **validation has been used twice** (see Leakage controls). Both sets of results are reported.
