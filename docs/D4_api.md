@@ -1,7 +1,7 @@
 # D4: fitted pipeline and API (Group 10)
 
-**Repository:** https://github.com/BigB2405/SwipeTape · **Branch/tag:** `D4` / `d4` · **Commit:** `[add hash]`
-**Modal API URL:** `[paste from modal deploy]` · **API docs (/docs):** `[Modal URL]/docs`
+**Repository:** https://github.com/BigB2405/SwipeTape · **Branch/tag:** `D4` / `d4-final` (also merged to `main`)
+**Modal API URL:** https://bigb2405--swipetape-api-web.us-east.modal.run · **API docs (/docs):** https://bigb2405--swipetape-api-web.us-east.modal.run/docs
 
 ## What is served
 The model selected in D3 (**M5, hybrid song-kNN**) as one scikit-learn `Pipeline`:
@@ -26,12 +26,12 @@ The bundle is loaded **once, at import** of `serve.py`; nothing is re-fitted whi
 
 ## Reproduce
 ```bash
-uv sync                                                    # first run `uv lock` once: D4 added fastapi, uvicorn, httpx to pyproject.toml
+uv sync --frozen                                           # uv.lock already includes fastapi, uvicorn, httpx
 uv run --frozen python scripts/prepare_data.py             # D2: cleaned data + split (data/raw/dataset.csv from Kaggle)
 uv run --frozen python scripts/train_pipeline.py           # fit M5 -> pipeline.joblib (about 1-2 min)
-uv run --frozen --with pytest pytest -q tests                            # 4 logic tests; the HTTP tests need fastapi + httpx
+uv run --frozen --with pytest pytest -q tests              # 15 tests (pipeline logic + HTTP 200/422/503)
 
-uv run uvicorn serve:app --reload                          # local API: http://localhost:8000/docs
+uv run --frozen uvicorn serve:app --reload                         # local API: http://localhost:8000/docs
 uv run --frozen python scripts/check_deployed.py --url http://127.0.0.1:8000
 ```
 **Test the 503 locally** (does not touch the live app):
@@ -46,10 +46,28 @@ uv run modal setup                                         # one time
 uv run modal deploy modal_serve.py                         # prints the public URL
 uv run --frozen python scripts/check_deployed.py --url <that URL>
 ```
-The image contains exactly `serve.py`, `pipeline_def.py` and `pipeline.joblib`. scikit-learn (plus joblib, pandas, numpy and the Python minor version) is pinned to what `metadata` records, and `serve` is imported inside the Modal function. The first request after idle takes a few seconds while the container loads the model.
+The image contains exactly `serve.py`, `pipeline_def.py` and `pipeline.joblib`. scikit-learn (plus joblib, pandas, numpy and the Python minor version) is pinned to what `metadata` records, and pyarrow to the local version (pandas needs it to unpickle the catalog's string columns). The bundle is read for these pins only on the deploying machine (`modal.is_local()`), and `serve` is imported inside the Modal function. The first request after idle takes a few seconds while the container loads the model.
 
 ## Local vs deployed outputs
-`scripts/check_deployed.py` loads the local `pipeline.joblib`, sends the same requests to the given URL, and compares: pipeline info fields, then, for three swipe sets (1 like; 5 likes + 3 dislikes; mixed taste, k = 20), the **recommended track ids and order (exact)** and **scores (within 1e-4)**; it also confirms 7 kinds of invalid input return 422. Result for the deployed URL: `[paste the final "ALL CHECKS PASSED" output]`.
+`scripts/check_deployed.py` loads the local `pipeline.joblib`, sends the same requests to the given URL, and compares: pipeline info fields, then, for three swipe sets (1 like; 5 likes + 3 dislikes; mixed taste, k = 20), the **recommended track ids and order (exact)** and **scores (within 1e-4)**; it also confirms 7 kinds of invalid input return 422. Result for the deployed URL (Nov 18, 2026; artifact built from commit `12019c5`):
+
+```text
+$ uv run --frozen python scripts/check_deployed.py --url https://bigb2405--swipetape-api-web.us-east.modal.run
+PASS GET /health -> 200
+PASS /health reports artifact_loaded=true
+PASS GET /pipeline/info -> 200
+PASS /pipeline/info.{sklearn_version, model, params, catalog_size, git_commit, built_at, steps} match local bundle (7 checks)
+PASS recommend [1 like]: same tracks, same order as local
+PASS recommend [1 like]: scores within 0.0001
+PASS recommend [5 likes + 3 dislikes]: same tracks, same order as local
+PASS recommend [5 likes + 3 dislikes]: scores within 0.0001
+PASS recommend [mixed taste, k=20]: same tracks, same order as local
+PASS recommend [mixed taste, k=20]: scores within 0.0001
+PASS invalid input [empty liked_ids | missing liked_ids | malformed id | unknown id | k out of range | liked and disliked overlap | extra field] -> 422 (7 checks)
+
+ALL CHECKS PASSED
+```
+The same script passes against the local server (`http://127.0.0.1:8000`), and the 503 run (`--expect-unavailable`, model path missing) passes 4/4.
 
 ## Postman
 `postman/swipetape_api.postman_collection.json`. Import it into Postman, set the `baseUrl` collection variable to the Modal URL, and run the collection (7 requests): health, pipeline info, sample (stores ids), valid recommend (200), and three invalid recommends (422). Every request has assertions. Screenshots go with the D5 submission.
@@ -58,4 +76,4 @@ The image contains exactly `serve.py`, `pipeline_def.py` and `pipeline.joblib`. 
 - `SongEmbedder.__init__` only stores its arguments and `fit` returns `self`, as the sklearn API (and HW4) require.
 - The artifact is a pickle: load only files you built yourself, with the matching scikit-learn version.
 - `GET /sample` and the id format check assume ids come from the catalog (`/sample`); ids outside it get a 422.
-- AI assistance: Claude helped draft `serve.py`, `modal_serve.py`, the tests, the check script and this note. _Contributions: [to confirm with group]._
+- AI assistance: Claude helped draft `serve.py`, `modal_serve.py`, the tests, the check script and this note. _Contributions: see the README (D4 line to confirm with group)._
