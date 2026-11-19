@@ -1,4 +1,5 @@
 /* Me: sign in / create an account, then the user's stats, taste, My List and liked songs. */
+import { CONFIG } from "../config.js";
 import { $, esc, indexOf, tasteProfile, tasteHTML, spotifyUrl, toast } from "./data.js";
 import { account, onAccountChange, signIn, signUp, signInWithGoogle, signOut, likedEntries, displayName } from "./auth.js";
 import { rowHTML, listBtn, similarBtn, hydrate } from "./ui.js";
@@ -16,8 +17,8 @@ function authFormHTML() {
   return `<div class="auth-card">
     <h2>${up ? "Create your SwipeTape account" : "Welcome back"}</h2>
     <p class="muted">${up ? "Save your swipes and My List, and get Home rows picked for you." : "Sign in to see your swipes, My List and your picks."}</p>
-    <button class="google" id="googleBtn">${GOOGLE}<span>Continue with Google</span></button>
-    <div class="or"><span>or</span></div>
+    ${CONFIG.GOOGLE_LOGIN ? `<button class="google" id="googleBtn">${GOOGLE}<span>Continue with Google</span></button>
+    <div class="or"><span>or</span></div>` : ""}
     <form id="authForm" novalidate>
       ${up ? '<label>Name<input name="name" autocomplete="name" maxlength="60" placeholder="What should we call you?"></label>' : ""}
       <label>Email<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
