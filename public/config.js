@@ -6,7 +6,7 @@
 export const CONFIG = {
   API_URL: "https://bigb2405--swipetape-api-web.us-east.modal.run",
   SUPABASE_URL: "https://igwdtnmodzidwxnnwhtm.supabase.co",
-  SUPABASE_PUBLISHABLE_KEY: "",
+  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_PyAVpd6tUm5y_huVnwtxJg_lG3RFyVz",
 };
 
 // Local development: `?api=local` talks to `uv run --frozen uvicorn serve:app` on port 8000.

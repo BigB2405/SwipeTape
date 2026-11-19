@@ -12,7 +12,7 @@ SwipeTape is a music discovery web app built around a Tinder-style swipe. Users 
 
 | Item | Link |
 |---|---|
-| Website (Vercel) | _[add the Vercel URL after deploy]_ |
+| Website (Vercel) | https://swipetape-group10.vercel.app |
 | Modal API / docs | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
 | Branch / tag | branch `D5` · tag `d5-final` (after review) |
 | Frontend code | [`public/`](public/) (`index.html`, `style.css`, `js/*.js`, `config.js`) |
