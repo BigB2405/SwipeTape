@@ -15,6 +15,7 @@ SwipeTape is a music discovery web app built around a Tinder-style swipe. Users 
 | Website (Vercel) | https://swipetape-group10.vercel.app |
 | Modal API / docs | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
 | Branch / tag | branch `D5` · tag `d5-final` (after review) |
+| D5 note (tabs, API calls, loading/error states, tests) | [`docs/D5_app.md`](docs/D5_app.md) · screenshots in [`docs/d5_screenshots/`](docs/d5_screenshots/) |
 | Frontend code | [`public/`](public/) (`index.html`, `style.css`, `js/*.js`, `config.js`) |
 | Accounts schema | [`sql/accounts.sql`](sql/accounts.sql) (Supabase Auth + row level security) |
 | API tests | [`postman/`](postman/swipetape_api.postman_collection.json) (10 requests with assertions) · [`scripts/check_deployed.py`](scripts/check_deployed.py) · [`tests/`](tests/) |
@@ -197,6 +198,8 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 │   ├── D3_modeling_note.md   # D3 modeling note (full version)
 │   ├── D3_modeling_note.pdf  # D3 modeling note (3-page submission version)
 │   ├── D4_api.md             # D4 pipeline + API note
+│   ├── D5_app.md             # D5 app + tests note
+│   ├── d5_screenshots/       # D5 app and Postman screenshots
 │   └── data_dictionary.md    # column definitions, roles, prediction-time availability
 ├── postman/
 │   └── swipetape_api.postman_collection.json  # API requests with assertions

@@ -2,12 +2,12 @@
   "info": {
     "name": "SwipeTape API (D4 + D5)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Set baseUrl to the deployed Modal URL (no trailing slash). Run all requests in order (3 fills the ids that 4 uses; 8 fills the seed that 10 uses)."
+    "description": "baseUrl is set to the deployed Modal API. Run all 10 requests in order with the Collection Runner (3 fills the ids that 4 uses; 8 fills the seed that 10 uses)."
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://REPLACE-WITH-YOUR-MODAL-URL.modal.run"
+      "value": "https://bigb2405--swipetape-api-web.us-east.modal.run"
     },
     {
       "key": "liked1",
