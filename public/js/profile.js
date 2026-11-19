@@ -110,7 +110,13 @@ document.addEventListener("submit", async (e) => {
       await signIn(email, password);
     }
   } catch (err) {
-    msg.textContent = /invalid login/i.test(err.message) ? "That email and password don't match an account." : err.message;
+    const m = err.message || "";
+    msg.textContent =
+      /invalid login/i.test(m) ? "That email and password don't match an account."
+      : /rate limit|too many/i.test(m) || err.status === 429 ? "Too many sign-ups in a short time. Please wait a few minutes and try again."
+      : /not confirmed/i.test(m) ? "Please confirm your email first (check your inbox), then sign in."
+      : /already registered/i.test(m) ? "That email already has an account. Sign in instead."
+      : m;
   } finally {
     if (document.body.contains(btn)) { btn.disabled = false; btn.querySelector(".cta-text").textContent = mode === "signup" ? "Create account" : "Sign in"; }
   }
