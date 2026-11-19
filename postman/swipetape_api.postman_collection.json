@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "SwipeTape API (D4)",
+    "name": "SwipeTape API (D4 + D5)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Set baseUrl to the deployed Modal URL (no trailing slash). Run requests 1-7 in order (3 fills the ids that 4 uses)."
+    "description": "Set baseUrl to the deployed Modal URL (no trailing slash). Run all requests in order (3 fills the ids that 4 uses; 8 fills the seed that 10 uses)."
   },
   "variable": [
     {
@@ -23,6 +23,10 @@
     },
     {
       "key": "disliked1",
+      "value": ""
+    },
+    {
+      "key": "seed1",
       "value": ""
     }
   ],
@@ -290,6 +294,124 @@
             "exec": [
               "pm.test(\"status is 422\", () => pm.response.to.have.status(422));",
               "pm.test(\"names the unknown id\", () => pm.expect(JSON.stringify(pm.response.json())).to.include(\"unknown track ids\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8 Search: valid query (200)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/search?q=yellow&limit=5",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "yellow"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const t = pm.response.json().tracks;",
+              "pm.test(\"returns up to 5 tracks with ids, best match first\", () => { pm.expect(t.length).to.be.within(1, 5); t.forEach(x => pm.expect(x.track_id).to.match(/^[A-Za-z0-9]{22}$/)); pm.expect(t[0].track_name.toLowerCase()).to.eql(\"yellow\"); pm.expect(t[0].match).to.eql(0); });",
+              "pm.collectionVariables.set(\"seed1\", t[0].track_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9 Search: query too short (422)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/search?q=a",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "a"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Find similar: one seed, k=5 (200)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"{{seed1}}\"\n  ],\n  \"k\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const r = pm.response.json().recommendations;",
+              "pm.test(\"exactly 5 songs, none is the seed\", () => { pm.expect(r.length).to.eql(5); r.forEach(x => pm.expect(x.track_id).to.not.eql(pm.collectionVariables.get(\"seed1\"))); });",
+              "pm.test(\"scores are sorted high to low\", () => { for (let i = 1; i < r.length; i++) pm.expect(r[i - 1].score).to.be.at.least(r[i].score); });",
+              "pm.test(\"each pick explains itself with the seed\", () => r.forEach(x => pm.expect(x.because_you_liked).to.eql(pm.collectionVariables.get(\"seed1\"))));"
             ]
           }
         }

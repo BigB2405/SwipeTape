@@ -8,6 +8,29 @@ SwipeTape is a music discovery web app built around a Tinder-style swipe. Users 
 
 ---
 
+## D5 submission: web app calling the live API
+
+| Item | Link |
+|---|---|
+| Website (Vercel) | _[add the Vercel URL after deploy]_ |
+| Modal API / docs | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
+| Branch / tag | branch `D5` · tag `d5-final` (after review) |
+| Frontend code | [`public/`](public/) (`index.html`, `style.css`, `js/*.js`, `config.js`) |
+| Accounts schema | [`sql/accounts.sql`](sql/accounts.sql) (Supabase Auth + row level security) |
+| API tests | [`postman/`](postman/swipetape_api.postman_collection.json) (10 requests with assertions) · [`scripts/check_deployed.py`](scripts/check_deployed.py) · [`tests/`](tests/) |
+
+The app has four tabs:
+- **Home:** a Netflix-style catalog with a featured song, then rows you scroll sideways: Trending, top songs per genre family, Hidden gems (random less-played songs, a counterweight to popularity bias) and, once you like songs, **"Because you liked …"** rows from the live model plus **My List**.
+- **Swipe:** the original Tinder-style deck. The playlist at the end now comes from the **live model** (`POST /recommend`, loves first, at most 25 likes and 25 dislikes). If the API can't be reached, the old in-browser formula makes "offline picks" and the page says so.
+- **Find similar:** search any of the 69,413 catalog songs (`GET /search`) or tap a quick pick. The song starts playing, and the model returns the **5 closest songs** (`POST /recommend` with one liked id, `k=5`), each with a preview, % similarity, My List and Spotify. "More like this" chains to a new seed.
+- **Me:** sign up or sign in with email/password or Google (Supabase Auth). Shows swipe stats, your taste profile, My List and liked songs. Guests can use every tab; signing in saves swipes and My List, and the deck skips songs you already rated.
+
+**Loading and error states:** each API call shows a spinner, says the model is waking up after 3 s (Modal cold start), times out after 60 s, and turns 422/503/network errors into readable messages with a retry button.
+
+**API changes for D5 (v0.5.0, same fitted `pipeline.joblib`, no retraining):** CORS for `*.vercel.app` and localhost (plus `ALLOWED_ORIGINS`), and `GET /search?q=&limit=` (422 if the query is under 2 characters, 503 without a model). `/recommend` is unchanged. 23/23 pytest tests pass, and `check_deployed.py` also checks search and CORS.
+
+**Data fix:** `public/songs.json` used to be built from the raw CSV and held 5,010 songs from the reserved test split. It is now built from `tracks_clean.parquet` (train + val only, asserted), so the app never shows a D6 test song and every song in it is known to the model.
+
 ## D4 submission: fitted pipeline and API
 
 | Item | Link |
@@ -131,11 +154,16 @@ uv run modal deploy dashboard/modal_app.py            # prints the public URL
 
 Never commit `.env`: it is gitignored, and no keys are stored in the code.
 
-### 6. Swipe app (Vercel frontend)
+### 6. Web app (Vercel frontend, D5)
 ```bash
-uv run python scripts/build_data.py       # regenerate public/songs.json from data/raw/dataset.csv
+uv run --frozen python scripts/build_data.py          # public/songs.json from the train+val catalog
+uv run --frozen uvicorn serve:app --port 8000         # optional: local API
+vercel dev                                            # http://localhost:3000  (add ?api=local to use the local API)
+vercel --prod                                         # deploy
 ```
-`public/` is a static site and `api/preview.js` is a Vercel serverless function. Deploy with `vercel`, or preview locally with `vercel dev`.
+`public/` is a static site (plain HTML/CSS/JS modules, no build step) and `api/preview.js` is a Vercel serverless function.
+
+**Accounts (one-time):** run [`sql/accounts.sql`](sql/accounts.sql) in the Supabase SQL editor. Put the **publishable** key in `public/config.js` (it is public by design; row level security keeps each user's rows private; never the secret key). In Supabase → Authentication: enable Email and Google, set the Site URL to the Vercel URL, and add it plus `http://localhost:3000` to the redirect URLs. For Google, create an OAuth client in Google Cloud Console with redirect URI `https://<project>.supabase.co/auth/v1/callback` and paste its ID and secret into the Google provider. Without a key, the app runs in guest mode.
 
 ---
 
@@ -173,9 +201,10 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 ├── postman/
 │   └── swipetape_api.postman_collection.json  # API requests with assertions
 ├── public/
-│   ├── app.js                # swipe logic, audio playback, recommendation engine
-│   ├── index.html            # app shell
-│   ├── songs.json            # compiled song data for the app
+│   ├── index.html            # app shell: nav + 4 tabs (Home, Swipe, Find similar, Me)
+│   ├── config.js             # public settings: API URL, Supabase URL + publishable key
+│   ├── js/                   # main (router), home, swipe, similar, profile, api, auth, preview, ui, data
+│   ├── songs.json            # train+val songs (popularity >= 40) for the app
 │   └── style.css
 ├── reports/
 │   ├── eda_stats.json        # D2 numbers quoted in the data note
@@ -192,9 +221,10 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 │   ├── train_pipeline.py     # D3/D4: fit and save the selected pipeline -> pipeline.joblib
 │   ├── check_deployed.py     # D4: compare a running API with the local pipeline
 │   ├── genres.py             # genre -> genre-family map (shared)
-│   └── build_data.py         # builds public/songs.json for the app
+│   └── build_data.py         # builds public/songs.json (train+val only) for the app
 ├── sql/
-│   └── schema.sql            # Supabase tables + read-only policies
+│   ├── schema.sql            # Supabase tables + read-only policies
+│   └── accounts.sql          # D5: profiles, swipes, my_list + row level security
 ├── swipetape/
 │   └── model.py              # re-exports pipeline_def (keeps D3 imports working)
 ├── tests/                    # D4: pipeline + API tests (pytest)
@@ -211,8 +241,9 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 
 ## The app
 
-- Tinder-style swipe interface with 30-second audio previews (iTunes, with Deezer as a fallback)
-- Playlist recommendations from likes, loves, and dislikes, using the audio features and genre
+- Netflix-style Home, Tinder-style Swipe, a kNN "Find similar" tab, and accounts (Supabase Auth: email or Google)
+- 30-second audio previews (iTunes, with Deezer as a fallback)
+- Playlists and "5 similar songs" from the live model API on Modal
 - "Because you liked …" explanations and a taste profile
 - Spotify links for the final playlist
 - Responsive single-page frontend (HTML, CSS, and JavaScript) deployed on Vercel
@@ -225,13 +256,14 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 | D2 Data preparation and EDA | Nov 2 | ✅ tag `d2-final` |
 | D3 Model evaluation | Nov 16 | ✅ tag `d3-final` |
 | D4 Fitted scikit-learn pipeline + FastAPI on Modal | Nov 23 | ✅ tag `d4-final` |
-| D5 Vercel frontend calling the live API + Postman tests | Nov 30 | planned |
+| D5 Vercel frontend calling the live API + Postman tests | Nov 30 | in progress, branch `D5` |
 | D6 Final report and demo (frozen model on reserved test data) | Dec 2 | planned |
 
 ## Contributions and AI use
 
 - **D2:** Devanshi Parmar: data preparation, plotting, data dictionary, dashboard code, first draft of the data note. Britain Russell: Supabase setup and data load, Modal deployment, dashboard chart fix, finalizing the data note.
 - **D3:** Britain Russell: evaluation design, model and evaluation code, experiments, first versions of the modeling note. Devanshi Parmar: code review, reproducing the results, revising the modeling note.
+- **D5:** _[to confirm with group]_ Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, tests and Postman. Claude Code drafted the code.
 - **D4:** _[to confirm with group]_ pipeline refactor (`pipeline_def.py`), FastAPI service, Modal files, tests, Postman collection, and D4 note (GitHub `ashroff23`). Britain Russell: building and verifying the artifact, Modal deployment and fix, local-vs-deployed check.
 
 **AI assistance:** Claude Code helped draft the preparation, plotting, dashboard, model, and evaluation code, the notes, and this README, and helped review and reproduce the D3 results, and drafted the D4 API, deployment, tests, and checks. The group reviewed and ran all of it.

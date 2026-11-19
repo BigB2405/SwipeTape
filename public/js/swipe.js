@@ -1,109 +1,36 @@
-"use strict";
+/* Swipe tab: the Tinder-style deck (unchanged behaviour), then a playlist from the live model.
+ * If the API can't be reached, the old in-browser formula makes an "offline" playlist instead. */
+import { $, $$, store, row, esc, shuffle, cleanName, firstArtist, norm, sleep, toast, fallbackArt, tagsFor, spotifyUrl,
+  ensureRow, tasteProfile, tasteHTML, indexOf, ID, NAME, ARTIST, POP, GENRE, EXPL, DUR, FEAT_COLS } from "./data.js";
+import { player, now, getPreview, stopAudio, syncPlayButtons, ICON_PAUSE, ICON_PLAY, ICON_REPLAY } from "./preview.js";
+import { api, capIds } from "./api.js";
+import { account, saveSwipe, removeSwipe, toggleMyList, signedIn, onAccountChange } from "./auth.js";
+import { rowHTML, listBtn, hydrate, similarBtn } from "./ui.js";
 
-/* Track row layout (see scripts/build_data.py) */
-const ID = 0, NAME = 1, ARTIST = 2, ALBUM = 3, POP = 4, GENRE = 5, EXPL = 7;
-const DANCE = 8, ENERGY = 9, VALENCE = 10, ACOUSTIC = 11, TEMPO = 15;
-const FEAT_COLS = [8, 9, 10, 11, 12, 13, 14, 15, 16]; // dance..loudness
 const FEAT_W = [1.0, 1.2, 1.0, 1.0, 0.8, 0.6, 0.3, 0.5, 0.6];
 const PLAYLIST_LEN = 20;
 const DECK_POOL_MIN_POP = 62;
 
-const $ = (s) => document.querySelector(s);
-const player = $("#player");
-
 const state = {
-  data: null,
   deckSize: 12,
   deck: [],          // [{t, preview, art}]
-  deckDone: false,   // finished resolving candidates
+  deckDone: false,
   deckWaiters: [],
   idx: 0,
-  swipes: [],        // [{t, dir: 'like'|'nope'|'love'}]
-  seen: new Set(),   // track indices shown in any round
-  z: null,           // standardized feature matrix
-  playingRow: null,
+  swipes: [],        // this round: [{t, dir: 'like'|'nope'|'love'}]
+  seen: new Set(),   // track indices shown in any round (plus the account's history)
+  z: null,
+  lastPicks: [],
+  active: false,
 };
-
-/* ------------------------------------------------------------------ utils */
-const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const norm = (s) => (s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^\p{L}\p{N} ]/gu, " ").replace(/\s+/g, " ").trim();
-const cleanName = (s) => s.replace(/\s*[([].*?[)\]]/g, "").split(" - ")[0].trim() || s;
-const firstArtist = (s) => s.split(", ")[0];
-const prettyGenre = (g) => g.replace(/-n-/g, " & ").replace(/^r & b$/, "R&B").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const spotifyUrl = (t) => `https://open.spotify.com/track/${state.data.tracks[t][ID]}`;
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-function toast(msg) {
-  const el = $("#toast");
-  el.textContent = msg;
-  el.classList.add("show");
-  clearTimeout(toast.t);
-  toast.t = setTimeout(() => el.classList.remove("show"), 2200);
-}
-
-function hashHue(str) { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 360; }
-function fallbackArt(row) {
-  const h = hashHue(row[ID]);
-  return `linear-gradient(150deg, hsl(${h} 75% 55%), hsl(${(h + 60) % 360} 70% 35%))`;
-}
-
-/* ---------------------------------------------------------- preview lookup */
-const previewCache = new Map();
-
-async function lookupITunes(row) {
-  const name = cleanName(row[NAME]);
-  const artist = firstArtist(row[ARTIST]);
-  const url = `https://itunes.apple.com/search?media=music&entity=song&limit=15&term=${encodeURIComponent(`${artist} ${name}`)}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error("itunes " + r.status);
-  const { results = [] } = await r.json();
-  const na = norm(artist), nn = norm(name);
-  const withPrev = results.filter((x) => x.previewUrl);
-  const hit =
-    withPrev.find((x) => norm(x.artistName).includes(na) && norm(cleanName(x.trackName)) === nn) ||
-    withPrev.find((x) => norm(x.artistName).includes(na) && norm(x.trackName).startsWith(nn)) ||
-    withPrev.find((x) => norm(x.artistName).includes(na) && norm(x.trackName).includes(nn)) ||
-    withPrev.find((x) => norm(x.artistName).includes(na) && nn.startsWith(norm(cleanName(x.trackName))));
-  if (!hit) return null;
-  return { preview: hit.previewUrl, art: hit.artworkUrl100?.replace("100x100bb", "600x600bb") || null };
-}
-
-async function lookupDeezer(row) {
-  const r = await fetch(`/api/preview?artist=${encodeURIComponent(row[ARTIST])}&track=${encodeURIComponent(cleanName(row[NAME]))}`);
-  if (!r.ok) return null;
-  return r.json();
-}
-
-async function lookupSpotifyArt(row) {
-  try {
-    const r = await fetch(`https://open.spotify.com/oembed?url=https://open.spotify.com/track/${row[ID]}`);
-    if (!r.ok) return null;
-    return (await r.json()).thumbnail_url || null;
-  } catch { return null; }
-}
-
-function getPreview(t) {
-  if (previewCache.has(t)) return previewCache.get(t);
-  const row = state.data.tracks[t];
-  const p = (async () => {
-    let res = null;
-    try { res = await lookupITunes(row); } catch { /* rate limited or offline: try Deezer */ }
-    if (!res) { try { res = await lookupDeezer(row); } catch { res = null; } }
-    if (res && !res.art) res.art = await lookupSpotifyArt(row);
-    return res;
-  })();
-  previewCache.set(t, p);
-  return p;
-}
 
 /* ------------------------------------------------------------ deck build */
 function pickCandidates(count) {
-  const { tracks, genreFamily, families } = state.data;
+  const { tracks, genreFamily, families } = store.data;
   const other = families.indexOf("Other");
   const byFam = families.map(() => []);
-  tracks.forEach((row, t) => {
-    if (row[POP] >= DECK_POOL_MIN_POP && !state.seen.has(t)) byFam[genreFamily[row[GENRE]]].push(t);
+  tracks.forEach((r, t) => {
+    if (r[POP] >= DECK_POOL_MIN_POP && !state.seen.has(t) && !account.swipes.has(r[ID])) byFam[genreFamily[r[GENRE]]].push(t);
   });
   byFam.forEach(shuffle);
   const famOrder = shuffle(families.map((_, i) => i).filter((i) => i !== other && byFam[i].length));
@@ -129,13 +56,10 @@ async function buildDeck() {
   const gen = (buildDeck.gen = (buildDeck.gen || 0) + 1);
   state.deck = [];
   state.deckDone = false;
-  const target = 15; // build enough for the largest option
+  const target = 15;
   const queue = pickCandidates(target + 12);
   const resolved = new Array(queue.length);
-  let next = 0;
-
-  // Resolve in parallel but publish in candidate order, so the deck stays diverse.
-  let published = 0;
+  let next = 0, published = 0;
   const publish = () => {
     while (published < queue.length && resolved[published] !== undefined) {
       const r = resolved[published];
@@ -160,7 +84,6 @@ async function buildDeck() {
 }
 
 function preloadImg(src) { if (src) { const i = new Image(); i.src = src; } }
-
 function deckReady(i) {
   return new Promise((res) => {
     const check = () => (state.deck[i] || state.deckDone ? res() : state.deckWaiters.push(check));
@@ -174,40 +97,24 @@ function show(id) {
   $("#counter").hidden = id !== "swipeScreen";
   window.scrollTo(0, 0);
 }
-
 function updateStartBtn() {
   const btn = $("#startBtn");
   if (!$("#startScreen").hidden) {
     const ready = !!state.deck[0];
     btn.disabled = !ready;
-    btn.querySelector(".cta-text").textContent = !state.data ? "Loading songs…" : ready ? "Start swiping" : "Finding clips…";
+    btn.querySelector(".cta-text").textContent = !store.data ? "Loading songs…" : ready ? "Start swiping" : "Finding clips…";
   }
 }
 
 /* ----------------------------------------------------------------- cards */
-function tagsFor(row) {
-  const tags = [prettyGenre(state.data.genres[row[GENRE]])];
-  if (row[ENERGY] > 0.78) tags.push("⚡ High energy");
-  else if (row[ENERGY] < 0.35) tags.push("🌙 Mellow");
-  if (row[DANCE] > 0.72) tags.push("💃 Danceable");
-  if (row[VALENCE] > 0.7) tags.push("☀️ Feel-good");
-  else if (row[VALENCE] < 0.25) tags.push("🌧 Moody");
-  if (row[ACOUSTIC] > 0.7 && tags.length < 3) tags.push("🎸 Acoustic");
-  return tags.slice(0, 3);
-}
-
-const ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M7 4h3.5v16H7zM13.5 4H17v16h-3.5z"/></svg>';
-const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
-const ICON_REPLAY = '<svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg>';
-
 function makeCard(item) {
-  const row = state.data.tracks[item.t];
+  const r = row(item.t);
   const el = document.createElement("article");
   el.className = "card";
-  el.setAttribute("aria-label", `${row[NAME]} by ${row[ARTIST]}`);
-  const initial = esc(cleanName(row[NAME]).charAt(0).toUpperCase());
+  el.setAttribute("aria-label", `${r[NAME]} by ${r[ARTIST]}`);
+  const initial = esc(cleanName(r[NAME]).charAt(0).toUpperCase());
   el.innerHTML = `
-    <div class="art art-fallback" style="background:${fallbackArt(row)}">
+    <div class="art art-fallback" style="background:${fallbackArt(item.t)}">
       ${item.art ? `<img alt="" draggable="false" src="${esc(item.art)}">` : initial}
     </div>
     <div class="shade"></div>
@@ -218,9 +125,9 @@ function makeCard(item) {
     <div class="stamp nope">NOPE</div>
     <div class="stamp love">LOVE<br>IT</div>
     <div class="info">
-      <h2 class="title">${esc(row[NAME])}</h2>
-      <p class="artist">${esc(row[ARTIST])}</p>
-      <div class="meta">${row[EXPL] ? '<span class="tag e">E</span>' : ""}${tagsFor(row).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+      <h2 class="title">${esc(r[NAME])}</h2>
+      <p class="artist">${esc(r[ARTIST])}</p>
+      <div class="meta">${r[EXPL] ? '<span class="tag e">E</span>' : ""}${tagsFor(item.t).map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div>
     </div>`;
   const img = el.querySelector("img");
   if (img) {
@@ -260,55 +167,49 @@ async function renderDeck(enterFrom) {
     requestAnimationFrame(() => requestAnimationFrame(() => { card.classList.add("snap"); card.style.transform = ""; }));
     card.addEventListener("transitionend", () => card.classList.remove("snap"), { once: true });
   }
-  playClip(item, card);
+  if (state.active) playClip(item, card);
 }
 
-function setActionsEnabled(on) {
-  for (const id of ["nopeBtn", "likeBtn", "loveBtn"]) $("#" + id).disabled = !on;
-}
+function setActionsEnabled(on) { for (const id of ["nopeBtn", "likeBtn", "loveBtn"]) $("#" + id).disabled = !on; }
 
 /* ----------------------------------------------------------------- audio */
 let activeCard = null;
 
 function playClip(item, card) {
   activeCard = card;
-  state.playingRow = null;
+  now.t = item.t; now.owner = "swipe";
+  syncPlayButtons();
   if (!item.preview) { player.pause(); return; }
   player.src = item.preview;
   player.currentTime = 0;
-  player.play().catch(() => syncPlayUI());
-  syncPlayUI();
+  player.play().catch(() => syncCardUI());
+  syncCardUI();
 }
 
-function syncPlayUI() {
-  if (activeCard) {
-    const btn = activeCard.querySelector(".playbtn");
-    const playing = !player.paused && !player.ended;
-    activeCard.classList.toggle("playing", playing);
-    if (btn) {
-      btn.innerHTML = player.ended ? ICON_REPLAY : playing ? ICON_PAUSE : ICON_PLAY;
-      btn.setAttribute("aria-label", player.ended ? "Replay clip" : playing ? "Pause clip" : "Play clip");
-    }
+function syncCardUI() {
+  if (!activeCard || now.owner !== "swipe") return;
+  const btn = activeCard.querySelector(".playbtn");
+  const playing = !player.paused && !player.ended;
+  activeCard.classList.toggle("playing", playing);
+  if (btn) {
+    btn.innerHTML = player.ended ? ICON_REPLAY : playing ? ICON_PAUSE : ICON_PLAY;
+    btn.setAttribute("aria-label", player.ended ? "Replay clip" : playing ? "Pause clip" : "Play clip");
   }
-  document.querySelectorAll(".row").forEach((r) => {
-    const on = state.playingRow === r && !player.paused;
-    r.classList.toggle("playing", on);
-    const b = r.querySelector(".thumb button");
-    if (b) b.innerHTML = on ? ICON_PAUSE : ICON_PLAY;
-  });
 }
 
-function togglePlay() {
-  if (!player.src) return;
+function toggleCard() {
+  if (now.owner !== "swipe" || !player.src) {
+    const item = state.deck[state.idx];
+    if (item && activeCard) playClip(item, activeCard);
+    return;
+  }
   if (player.paused || player.ended) { if (player.ended) player.currentTime = 0; player.play().catch(() => {}); }
   else player.pause();
 }
 
-player.addEventListener("play", syncPlayUI);
-player.addEventListener("pause", syncPlayUI);
-player.addEventListener("ended", syncPlayUI);
+for (const ev of ["play", "pause", "ended"]) player.addEventListener(ev, syncCardUI);
 player.addEventListener("timeupdate", () => {
-  if (!activeCard || state.playingRow) return;
+  if (!activeCard || now.owner !== "swipe") return;
   const d = player.duration || 30;
   const bar = activeCard.querySelector(".clipbar i");
   if (bar) bar.style.width = `${(player.currentTime / d) * 100}%`;
@@ -323,7 +224,7 @@ function attachDrag(card) {
   let sx = 0, sy = 0, dx = 0, dy = 0, lastX = 0, lastT = 0, vx = 0, down = false, moved = false;
   const stamps = { like: card.querySelector(".stamp.like"), nope: card.querySelector(".stamp.nope"), love: card.querySelector(".stamp.love") };
 
-  card.querySelector(".playbtn")?.addEventListener("click", (e) => { e.stopPropagation(); togglePlay(); });
+  card.querySelector(".playbtn")?.addEventListener("click", (e) => { e.stopPropagation(); toggleCard(); });
 
   card.addEventListener("pointerdown", (e) => {
     if (e.target.closest(".playbtn") || card.dataset.gone) return;
@@ -350,7 +251,7 @@ function attachDrag(card) {
     if (!down) return;
     down = false;
     card.classList.remove("dragging");
-    if (!moved) { togglePlay(); return; }
+    if (!moved) { toggleCard(); return; }
     const fastX = Math.abs(vx) > 0.6 && Math.abs(dx) > 40;
     if (-dy > THRESH && -dy > Math.abs(dx)) return swipe("love", { dx, dy });
     if (dx > THRESH || (fastX && vx > 0)) return swipe("like", { dx, dy });
@@ -390,6 +291,8 @@ function swipe(dir, from) {
   state.swipes.push({ t, dir });
   state.seen.add(t);
   state.idx++;
+  saveSwipe(row(t)[ID], dir);
+  document.dispatchEvent(new CustomEvent("swipetape:swiped"));
   player.pause();
   setTimeout(() => renderDeck(), 280);
 }
@@ -398,33 +301,33 @@ function rewind() {
   const last = state.swipes.pop();
   if (!last) return;
   state.idx--;
+  removeSwipe(row(last.t)[ID]);
+  document.dispatchEvent(new CustomEvent("swipetape:swiped"));
   const off = last.dir === "love" ? "translate(0, -120%)" : `translate(${last.dir === "like" ? 120 : -120}%, 0) rotate(${last.dir === "like" ? 30 : -30}deg)`;
   renderDeck(off);
 }
 
-/* -------------------------------------------------------- recommendation */
+/* -------------------------------------------- offline fallback (pre-D5 formula) */
 function buildZ() {
   if (state.z) return;
-  const { tracks } = state.data;
+  const tracks = store.data.tracks.slice(0, store.n0);   // songs.json rows only (API-only rows have no features)
   const n = tracks.length, k = FEAT_COLS.length;
   const mean = new Float64Array(k), sd = new Float64Array(k);
-  for (const row of tracks) FEAT_COLS.forEach((c, j) => (mean[j] += row[c]));
+  for (const r of tracks) FEAT_COLS.forEach((c, j) => (mean[j] += r[c]));
   mean.forEach((_, j) => (mean[j] /= n));
-  for (const row of tracks) FEAT_COLS.forEach((c, j) => (sd[j] += (row[c] - mean[j]) ** 2));
+  for (const r of tracks) FEAT_COLS.forEach((c, j) => (sd[j] += (r[c] - mean[j]) ** 2));
   sd.forEach((_, j) => (sd[j] = Math.sqrt(sd[j] / n) || 1));
   const z = new Float32Array(n * k);
-  tracks.forEach((row, i) => FEAT_COLS.forEach((c, j) => (z[i * k + j] = ((row[c] - mean[j]) / sd[j]) * FEAT_W[j])));
-  state.z = z;
+  tracks.forEach((r, i) => FEAT_COLS.forEach((c, j) => (z[i * k + j] = ((r[c] - mean[j]) / sd[j]) * FEAT_W[j])));
+  state.z = { z, n };
 }
 
-function recommend() {
+function localRecommend(swipes) {
   buildZ();
-  const { tracks, genreFamily } = state.data;
-  const k = FEAT_COLS.length, z = state.z;
-  const likes = state.swipes.filter((s) => s.dir !== "nope");
-  const nopes = state.swipes.filter((s) => s.dir === "nope");
-  if (!likes.length) return null;
-
+  const { tracks, genreFamily } = store.data;
+  const k = FEAT_COLS.length, { z, n } = state.z;
+  const likes = swipes.filter((s) => s.dir !== "nope");
+  const nopes = swipes.filter((s) => s.dir === "nope");
   const weight = (s) => (s.dir === "love" ? 2 : 1);
   const avg = (list, wfn) => {
     const v = new Float64Array(k); let tot = 0;
@@ -441,11 +344,11 @@ function recommend() {
   for (const s of likes) { const g = tracks[s.t][GENRE], w = weight(s); totW += w; gLike[g] = (gLike[g] || 0) + w; fLike[genreFamily[g]] = (fLike[genreFamily[g]] || 0) + w; }
   for (const s of nopes) { const f = genreFamily[tracks[s.t][GENRE]]; fNope[f] = (fNope[f] || 0) + 1; }
 
-  const swiped = new Set(state.swipes.map((s) => s.t));
+  const swiped = new Set([...state.seen]);
   const scored = [];
-  for (let i = 0; i < tracks.length; i++) {
-    if (swiped.has(i)) continue;
-    const row = tracks[i], g = row[GENRE], f = genreFamily[g];
+  for (let i = 0; i < n; i++) {
+    if (swiped.has(i) || account.swipes.has(tracks[i][ID])) continue;
+    const r = tracks[i], g = r[GENRE], f = genreFamily[g];
     let dotL = 0, dotD = 0, nx = 0;
     for (let j = 0; j < k; j++) { const x = z[i * k + j]; nx += x * x; dotL += x * L[j]; if (D) dotD += x * D[j]; }
     nx = Math.sqrt(nx) || 1;
@@ -453,21 +356,19 @@ function recommend() {
     if (D) s -= 0.3 * (dotD / (nx * nD));
     s += 0.55 * ((gLike[g] || 0) / totW) + 0.35 * ((fLike[f] || 0) / totW);
     if (fNope[f] && !fLike[f]) s -= 0.25 * (fNope[f] / nopes.length);
-    s += 0.25 * (row[POP] / 100);
+    s += 0.25 * (r[POP] / 100);
     scored.push([s, i]);
   }
   scored.sort((a, b) => b[0] - a[0]);
 
   const perArtist = {}, names = new Set(), picks = [];
   for (const [s, i] of scored) {
-    const row = tracks[i], a = firstArtist(row[ARTIST]), nm = norm(cleanName(row[NAME])) + "|" + a;
+    const r = tracks[i], a = firstArtist(r[ARTIST]), nm = norm(cleanName(r[NAME])) + "|" + a;
     if ((perArtist[a] || 0) >= 2 || names.has(nm)) continue;
     perArtist[a] = (perArtist[a] || 0) + 1; names.add(nm);
     picks.push({ t: i, s });
     if (picks.length === PLAYLIST_LEN) break;
   }
-
-  // "Because you liked …": the closest liked song in feature space
   for (const p of picks) {
     let best = null, bd = Infinity;
     for (const l of likes) {
@@ -479,106 +380,99 @@ function recommend() {
     p.because = best;
   }
   const hi = picks[0].s, lo = picks[picks.length - 1].s;
-  picks.forEach((p) => (p.pct = Math.round(hi === lo ? 95 : 72 + 26 * ((p.s - lo) / (hi - lo)))));
-  return { picks, likes, gLike };
+  picks.forEach((p) => (p.label = `${Math.round(hi === lo ? 95 : 72 + 26 * ((p.s - lo) / (hi - lo)))}%`));
+  return picks;
+}
+
+/** Live model: loves first (they matter most), then likes, at most 25 each way. */
+async function modelRecommend(swipes, onSlow) {
+  const liked = capIds([...swipes.filter((s) => s.dir === "love"), ...swipes.filter((s) => s.dir === "like")].map((s) => row(s.t)[ID]));
+  const nopeIds = capIds(swipes.filter((s) => s.dir === "nope").map((s) => row(s.t)[ID]).filter((id) => !liked.includes(id)));
+  const recs = await api.recommend(liked, nopeIds, 35, { onSlow });
+  // The API already skips this round's swipes; also leave out songs this account swiped in earlier rounds.
+  return recs.filter((r) => !account.swipes.has(r.track_id)).slice(0, PLAYLIST_LEN)
+    .map((r) => ({ t: ensureRow(r), s: r.score, because: indexOf(r.because_you_liked), label: `${Math.round(r.score * 100)}%` }));
 }
 
 /* --------------------------------------------------------------- results */
-function finish() {
+async function finish() {
   player.pause();
   activeCard = null;
-  const res = recommend();
+  now.owner = null;
   show("resultScreen");
-  const { tracks, genres } = state.data;
   const nLike = state.swipes.filter((s) => s.dir === "like").length;
   const nLove = state.swipes.filter((s) => s.dir === "love").length;
+  const likes = state.swipes.filter((s) => s.dir !== "nope");
+  const gen = (finish.gen = (finish.gen || 0) + 1);
 
-  if (!res) {
-    $("#matchBanner").hidden = false;
+  const empty = !likes.length;
+  $("#matchBanner .match-title").textContent = empty ? "No matches… yet" : "Your mix is ready";
+  $("#taste").hidden = empty; $(".pl-head").hidden = empty; $("#resultActions").hidden = empty;
+  $("#mixSource").hidden = true;
+  if (empty) {
     $("#collage").innerHTML = "";
     $("#matchSub").textContent = "";
-    $("#matchBanner .match-title").textContent = "No matches… yet";
-    $("#taste").hidden = true;
-    $(".pl-head").hidden = true;
-    $("#copyBtn").hidden = true;
     $("#playlist").innerHTML = `<li class="empty-state">You passed on every song. Swipe again with a new set, and like at least one song so we have something to go on.</li>`;
     return;
   }
-  $("#matchBanner .match-title").textContent = "Your mix is ready";
-  $("#taste").hidden = false; $(".pl-head").hidden = false; $("#copyBtn").hidden = false;
 
   const artFor = (t) => state.deck.find((d) => d.t === t)?.art;
-  const liked = [...res.likes].sort((a, b) => (b.dir === "love") - (a.dir === "love")).slice(0, 4);
-  $("#collage").innerHTML = liked.map((l, i) => {
+  const top = [...likes].sort((a, b) => (b.dir === "love") - (a.dir === "love")).slice(0, 4);
+  $("#collage").innerHTML = top.map((l, i) => {
     const a = artFor(l.t);
-    return `<div style="background-image:${a ? `url('${esc(a)}')` : fallbackArt(tracks[l.t])};animation-delay:${i * 90}ms"></div>`;
+    return `<div style="background-image:${a ? `url('${esc(a)}')` : fallbackArt(l.t)};animation-delay:${i * 90}ms"></div>`;
   }).join("");
-  $("#matchSub").textContent = `You liked ${nLike + nLove} of ${state.swipes.length} songs${nLove ? ` and loved ${nLove}` : ""}. Here are ${res.picks.length} songs picked to match.`;
+  $("#matchSub").textContent = `You liked ${nLike + nLove} of ${state.swipes.length} songs${nLove ? ` and loved ${nLove}` : ""}.`;
+  $("#taste").innerHTML = tasteHTML(tasteProfile(likes));
+  $("#plMeta").textContent = "";
+  $("#playlist").innerHTML = `<li class="loading-state"><div class="spinner"></div><span id="mixWait">Asking the SwipeTape model for your mix…</span></li>`;
 
-  // taste profile from liked songs
-  const wavg = (c) => { let s = 0, w = 0; for (const l of res.likes) { const x = l.dir === "love" ? 2 : 1; s += tracks[l.t][c] * x; w += x; } return s / w; };
-  const traits = [["Energy", wavg(ENERGY)], ["Danceability", wavg(DANCE)], ["Positivity", wavg(VALENCE)], ["Acoustic", wavg(ACOUSTIC)]];
-  const topGenres = Object.entries(res.gLike).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g]) => prettyGenre(genres[g]));
-  $("#taste").innerHTML = `
-    <h4>Your taste</h4>
-    ${traits.map(([n, v]) => `<div class="trait"><span>${n}</span><div class="bar"><i style="width:${Math.round(v * 100)}%"></i></div><span>${Math.round(v * 100)}</span></div>`).join("")}
-    <div class="trait"><span>Tempo</span><div></div><span>${Math.round(wavg(TEMPO))}</span></div>
-    <div class="genres">${topGenres.map((g) => `<span>${esc(g)}</span>`).join("")}</div>`;
+  let picks, source = "model", why = "";
+  try {
+    picks = await modelRecommend(state.swipes, () => { const w = $("#mixWait"); if (w) w.textContent = "Waking up the model. The first request can take up to 30 seconds…"; });
+    if (!picks.length) throw new Error("The model returned no songs.");
+  } catch (e) {
+    why = e.message;
+    source = "offline";
+    picks = localRecommend(state.swipes);
+    toast("The model API didn't answer, so these are offline picks.", 3500);
+  }
+  if (gen !== finish.gen) return;
+  state.lastPicks = picks;
 
-  const mins = Math.round(res.picks.reduce((a, p) => a + tracks[p.t][6], 0) / 60);
-  $("#plMeta").textContent = `${res.picks.length} songs · ${mins} min`;
-  state.lastPicks = res.picks;
-
-  $("#playlist").innerHTML = res.picks.map((p, n) => {
-    const row = tracks[p.t];
-    return `<li class="row" data-t="${p.t}">
-      <div class="thumb" style="background-image:${fallbackArt(row)}"><button aria-label="Play preview of ${esc(row[NAME])}">${ICON_PLAY}</button></div>
-      <div class="txt">
-        <div class="t">${n + 1}. ${esc(row[NAME])}</div>
-        <div class="a">${esc(row[ARTIST])}</div>
-        <div class="why">Because you liked <b>${esc(cleanName(tracks[p.because][NAME]))}</b></div>
-      </div>
-      <div class="right"><span class="pct">${p.pct}%</span><a class="sp" href="${spotifyUrl(p.t)}" target="_blank" rel="noopener">Spotify</a></div>
-    </li>`;
-  }).join("");
-
-  // Fill in album art from Spotify (no preview lookups until a row is played)
-  (async () => {
-    for (const li of document.querySelectorAll(".row")) {
-      const t = +li.dataset.t;
-      const known = state.deck.find((d) => d.t === t)?.art;
-      lookupSpotifyArt(tracks[t]).then((src) => {
-        const img = known || src;
-        if (img) li.querySelector(".thumb").style.backgroundImage = `url('${img}')`;
-      });
-      await sleep(40);
-    }
-  })();
-}
-
-async function playRow(li) {
-  if (state.playingRow === li) { togglePlay(); return; }
-  player.pause();
-  state.playingRow = li;
-  activeCard = null;
-  syncPlayUI();
-  const res = await getPreview(+li.dataset.t);
-  if (state.playingRow !== li) return;
-  if (!res?.preview) { toast("No preview for this one. Try it on Spotify."); state.playingRow = null; syncPlayUI(); return; }
-  player.src = res.preview;
-  player.play().catch(() => {});
+  $("#mixSource").hidden = false;
+  $("#mixSource").className = "mix-source " + source;
+  $("#mixSource").innerHTML = source === "model"
+    ? "Picked by the SwipeTape model (song kNN, live API). % = how close each song is to the songs you liked (audio features + genre)."
+    : `Offline picks: a simple in-browser formula, because the model API failed (${esc(why)}). <button class="linkbtn" id="retryMix">Try the model again</button>`;
+  $("#matchSub").textContent += ` Here are ${picks.length} songs picked to match.`;
+  const mins = Math.round(picks.reduce((a, p) => a + (row(p.t)[DUR] || 0), 0) / 60);
+  $("#plMeta").textContent = `${picks.length} songs${mins ? ` · ${mins} min` : ""}`;
+  $("#playlist").innerHTML = picks.map((p, n) => rowHTML(p.t, {
+    n: n + 1,
+    why: p.because !== undefined && p.because !== null ? `Because you liked <b>${esc(cleanName(row(p.because)[NAME]))}</b>` : "",
+    right: `<span class="pct">${p.label}</span><span class="row-btns">${listBtn(p.t, "swipe")}<a class="sp" href="${spotifyUrl(p.t)}" target="_blank" rel="noopener">Spotify</a></span>`,
+  })).join("");
+  hydrate($("#resultScreen"));
 }
 
 async function copyLinks() {
-  const text = (state.lastPicks || []).map((p) => spotifyUrl(p.t)).join("\n");
+  const text = state.lastPicks.map((p) => spotifyUrl(p.t)).join("\n");
   try { await navigator.clipboard.writeText(text); }
   catch {
     const ta = document.createElement("textarea");
     ta.value = text; document.body.appendChild(ta); ta.select();
-    try { document.execCommand("copy"); } catch {}
+    try { document.execCommand("copy"); } catch { /* ignore */ }
     ta.remove();
   }
   toast("Copied! Paste into a Spotify playlist.");
+}
+
+async function saveAll() {
+  if (!signedIn()) { toast("Sign in on the Me tab to save songs to My List.", 3200); return; }
+  let n = 0;
+  for (const p of state.lastPicks) if (!account.myList.has(row(p.t)[ID])) { await toggleMyList(row(p.t)[ID], "swipe"); n++; }
+  toast(n ? `Saved ${n} songs to My List.` : "They're all in My List already.");
 }
 
 /* ------------------------------------------------------------- startup */
@@ -587,20 +481,18 @@ function startSwiping() {
   state.idx = 0;
   state.swipes = [];
   show("swipeScreen");
-  // Calling play() inside this click unlocks audio for the rest of the session.
-  renderDeck();
+  renderDeck();   // play() inside this click unlocks audio for the rest of the session
 }
 
 function newRound() {
   player.pause();
-  state.playingRow = null;
   show("startScreen");
   buildDeck();
   updateStartBtn();
 }
 
-document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => {
-  document.querySelectorAll(".chip").forEach((x) => { x.classList.toggle("on", x === c); x.setAttribute("aria-checked", x === c); });
+$$("#tab-swipe .chip").forEach((c) => c.addEventListener("click", () => {
+  $$("#tab-swipe .chip").forEach((x) => { x.classList.toggle("on", x === c); x.setAttribute("aria-checked", x === c); });
   state.deckSize = +c.dataset.n;
 }));
 $("#startBtn").addEventListener("click", startSwiping);
@@ -610,26 +502,36 @@ $("#loveBtn").addEventListener("click", () => swipe("love"));
 $("#rewindBtn").addEventListener("click", rewind);
 $("#againBtn").addEventListener("click", newRound);
 $("#copyBtn").addEventListener("click", copyLinks);
-$("#homeBtn").addEventListener("click", () => { if ($("#startScreen").hidden) newRound(); });
-$("#playlist").addEventListener("click", (e) => {
-  const b = e.target.closest(".thumb button");
-  if (b) playRow(b.closest(".row"));
-});
+$("#saveAllBtn").addEventListener("click", saveAll);
+$("#resultScreen").addEventListener("click", (e) => { if (e.target.id === "retryMix") finish(); });
 
 document.addEventListener("keydown", (e) => {
-  if ($("#swipeScreen").hidden || e.metaKey || e.ctrlKey || e.altKey) return;
-  const map = { ArrowRight: () => swipe("like"), ArrowLeft: () => swipe("nope"), ArrowUp: () => swipe("love"), " ": togglePlay, Backspace: rewind };
+  if (!state.active || $("#swipeScreen").hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.closest?.("input, textarea")) return;
+  const map = { ArrowRight: () => swipe("like"), ArrowLeft: () => swipe("nope"), ArrowUp: () => swipe("love"), " ": toggleCard, Backspace: rewind };
   if (map[e.key]) { e.preventDefault(); map[e.key](); }
 });
 
-(async function init() {
-  try {
-    const r = await fetch("songs.json");
-    state.data = await r.json();
-  } catch {
-    $("#startBtn .cta-text").textContent = "Couldn't load songs. Refresh to retry.";
-    return;
-  }
-  updateStartBtn();
-  buildDeck();
-})();
+// Signing in mid-round: rebuild the deck so it skips songs this account already swiped.
+let lastUser = null;
+onAccountChange(() => {
+  const id = account.user?.id || null;
+  if (id !== lastUser) { lastUser = id; if (store.data && !$("#startScreen").hidden) buildDeck(); }
+});
+
+let started = false;
+export const swipeTab = {
+  enter() {
+    state.active = true;
+    if (!started) { started = true; buildDeck(); updateStartBtn(); }
+    if (!$("#swipeScreen").hidden) {          // came back mid-round: resume the current card
+      const item = state.deck[state.idx];
+      const card = $("#deck .card:last-child");
+      if (item && card) playClip(item, card);
+    }
+  },
+  leave() {
+    state.active = false;
+    if (now.owner === "swipe") { player.pause(); now.owner = null; }
+  },
+};

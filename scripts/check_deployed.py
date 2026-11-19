@@ -18,14 +18,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import serve  # noqa: E402  (same code the API runs; loads the local pipeline.joblib)
 
 
-def call(base, method, path, body=None, timeout=120):
+def call(base, method, path, body=None, timeout=120, headers=None, raw=False):
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(base + path, data=data, method=method, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(base + path, data=data, method=method,
+                                 headers={"Content-Type": "application/json", **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.status, json.loads(r.read())
+            return (r.status, r.headers) if raw else (r.status, json.loads(r.read()))
     except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read() or b"null")
+        return (e.code, e.headers) if raw else (e.code, json.loads(e.read() or b"null"))
 
 
 failures = []
@@ -52,6 +53,8 @@ def main():
         check("POST /recommend -> 503 without model", st == 503, st)
         st, _ = call(base, "GET", "/pipeline/info")
         check("GET /pipeline/info -> 503 without model", st == 503, st)
+        st, _ = call(base, "GET", "/search?q=yellow")
+        check("GET /search -> 503 without model", st == 503, st)
         return finish()
 
     check("/health reports artifact_loaded=true", h and h.get("artifact_loaded") is True, h)
@@ -91,6 +94,20 @@ def main():
     for name, body in bad.items():
         st, _ = call(base, "POST", "/recommend", body)
         check(f"invalid input [{name}] -> 422", st == 422, st)
+
+    # D5: search and browser access from the Vercel frontend
+    for q in ("yellow", "bad bunny"):
+        st, out = call(base, "GET", f"/search?q={q.replace(' ', '%20')}&limit=10")
+        local = serve.search_items(bundle, q, 10)
+        check(f"search [{q}]: same tracks, same order as local", st == 200 and out["tracks"] == local, st)
+    for q in ("a", "%20%20"):
+        st, _ = call(base, "GET", f"/search?q={q}")
+        check(f"search [{q!r}] too short -> 422", st == 422, st)
+    pre = {"Origin": "https://swipetape.vercel.app", "Access-Control-Request-Method": "POST",
+           "Access-Control-Request-Headers": "content-type"}
+    st, hdr = call(base, "OPTIONS", "/recommend", headers=pre, raw=True)
+    check("CORS preflight from a vercel.app origin is allowed",
+          st == 200 and hdr.get("access-control-allow-origin") == pre["Origin"], st)
     return finish()
 
 

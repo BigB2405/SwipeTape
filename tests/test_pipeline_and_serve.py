@@ -88,3 +88,33 @@ def test_http_corrupt_or_wrong_version_is_503(serve_mod, tmp_path, ids):
     joblib.dump(build_bundle(sklearn_version="0.0.1"), old)
     c = client_for(serve_mod(old))
     assert c.post("/recommend", json={"liked_ids": ids[:1]}).status_code == 503
+
+
+def test_http_search(serve_mod, bundle_path):
+    c = client_for(serve_mod(bundle_path))
+    r = c.get("/search", params={"q": "song 12", "limit": 5})
+    assert r.status_code == 200
+    t = r.json()["tracks"]
+    assert t and t[0]["track_name"] == "Song 12"                        # exact title ranks first
+    assert all("12" in x["track_name"] for x in t)
+    by_artist = c.get("/search", params={"q": "artist 7"}).json()["tracks"]
+    assert {x["artist"] for x in by_artist} >= {"Artist 7"}
+    assert c.get("/search", params={"q": "zzzz"}).json()["tracks"] == []
+
+
+@pytest.mark.parametrize("params", [{}, {"q": "a"}, {"q": "  "}, {"q": "song", "limit": 0}, {"q": "song", "limit": 51}])
+def test_http_search_invalid_is_422(serve_mod, bundle_path, params):
+    assert client_for(serve_mod(bundle_path)).get("/search", params=params).status_code == 422
+
+
+def test_http_search_missing_artifact_is_503(serve_mod, tmp_path):
+    assert client_for(serve_mod(tmp_path / "missing.joblib")).get("/search?q=song").status_code == 503
+
+
+def test_cors_allows_vercel_and_blocks_others(serve_mod, bundle_path):
+    c = client_for(serve_mod(bundle_path))
+    pre = {"Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"}
+    ok = c.options("/recommend", headers={"Origin": "https://swipetape.vercel.app", **pre})
+    assert ok.status_code == 200 and ok.headers["access-control-allow-origin"] == "https://swipetape.vercel.app"
+    bad = c.options("/recommend", headers={"Origin": "https://evil.example.com", **pre})
+    assert "access-control-allow-origin" not in bad.headers

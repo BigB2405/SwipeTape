@@ -9,7 +9,11 @@ scikit-learn, the service still starts and answers 503 (not 500) on the model en
 GET  /health         liveness; says whether the model loaded (always 200)
 GET  /pipeline/info  describes the artifact: steps, built_at, versions, parameters, D3 validation score
 GET  /sample         a few catalog tracks (ids to try /recommend with)
+GET  /search         find catalog tracks by song title and/or artist (422 query too short, 503 no model)
 POST /recommend      liked / disliked track ids -> ranked recommendations (422 bad input, 503 no model)
+
+CORS (D5): the Vercel frontend calls this API from the browser. Allowed origins are *.vercel.app, localhost,
+and any extra origins listed in the ALLOWED_ORIGINS environment variable (comma separated).
 """
 import os
 from pathlib import Path
@@ -17,7 +21,9 @@ from typing import Annotated
 
 import joblib
 import sklearn
+import numpy as np
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 import pipeline_def  # noqa: F401  (the pickled pipeline refers to its classes by module name)
@@ -43,8 +49,16 @@ try:                                           # loaded once per server process
 except Exception as e:                         # noqa: BLE001  any failure -> 503, never a 500
     BUNDLE, LOAD_ERROR = None, f"{type(e).__name__}: {e}"
 
-app = FastAPI(title="SwipeTape recommender API", version="0.4.0",
+app = FastAPI(title="SwipeTape recommender API", version="0.5.0",
               description="Song-to-song recommender selected in D3 (hybrid audio + genre-mix embedding).")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()],
+    allow_origin_regex=r"https://[A-Za-z0-9-]+\.vercel\.app|http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+    max_age=86400,
+)
 
 
 def _bundle() -> dict:
@@ -115,6 +129,41 @@ def sample(n: int = Query(5, ge=1, le=20), seed: int = Query(0, ge=0, le=100_000
     rows = meta.sample(n=min(n, len(meta)), random_state=seed)
     return {"tracks": [{"track_id": r.track_id, "track_name": r.track_name, "artist": r.primary_artist}
                        for r in rows.itertuples()]}
+
+
+_SEARCH_CACHE: dict = {}
+
+
+def search_items(bundle: dict, q: str, limit: int) -> list[dict]:
+    """Every word of q must appear in "title artist". `match` ranks the hit: 0 exact title, 1 exact artist,
+    2 title starts with q, 3 artist starts with q, 4 words found anywhere. Lower is better."""
+    meta = bundle["pipeline"].named_steps["rec"].meta_
+    key = id(meta)
+    if key not in _SEARCH_CACHE:                   # lower-cased columns are built once per loaded bundle
+        name = meta.track_name.astype(str).str.lower().str.strip().to_numpy(dtype=str)
+        artist = meta.primary_artist.astype(str).str.lower().str.strip().to_numpy(dtype=str)
+        _SEARCH_CACHE.clear()
+        _SEARCH_CACHE[key] = (name, artist, np.char.add(np.char.add(name, " "), artist))
+    name, artist, hay = _SEARCH_CACHE[key]
+    q = " ".join(q.lower().split())
+    hit = np.ones(len(meta), bool)
+    for w in q.split():
+        hit &= np.char.find(hay, w) >= 0
+    idx = np.flatnonzero(hit)
+    tier = np.select([name[idx] == q, artist[idx] == q, np.char.startswith(name[idx], q),
+                      np.char.startswith(artist[idx], q)], [0, 1, 2, 3], 4)
+    order = np.argsort(tier, kind="stable")[:limit]
+    idx, tier = idx[order], tier[order]
+    return [{"track_id": r.track_id, "track_name": r.track_name, "artist": r.primary_artist, "match": int(m)}
+            for r, m in zip(meta.iloc[idx].itertuples(), tier)]
+
+
+@app.get("/search")
+def search(q: Annotated[str, Query(min_length=2, max_length=100, description="Song title and/or artist")],
+           limit: int = Query(10, ge=1, le=50)):
+    if not q.strip() or len(q.strip()) < 2:
+        raise HTTPException(status_code=422, detail="query must have at least 2 non-space characters")
+    return {"query": q, "tracks": search_items(_bundle(), q, limit)}
 
 
 @app.post("/recommend", response_model=RecommendResponse)
