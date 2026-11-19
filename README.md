@@ -163,7 +163,7 @@ vercel --prod                                         # deploy
 ```
 `public/` is a static site (plain HTML/CSS/JS modules, no build step) and `api/preview.js` is a Vercel serverless function.
 
-**Accounts (one-time):** run [`sql/accounts.sql`](sql/accounts.sql) in the Supabase SQL editor. Put the **publishable** key in `public/config.js` (it is public by design; row level security keeps each user's rows private; never the secret key). In Supabase → Authentication: enable Email and Google, set the Site URL to the Vercel URL, and add it plus `http://localhost:3000` to the redirect URLs. For Google, create an OAuth client in Google Cloud Console with redirect URI `https://<project>.supabase.co/auth/v1/callback` and paste its ID and secret into the Google provider. Without a key, the app runs in guest mode.
+**Accounts (one-time):** run [`sql/accounts.sql`](sql/accounts.sql) in the Supabase SQL editor. Put the **publishable** key in `public/config.js` (it is public by design; row level security keeps each user's rows private; never the secret key). In Supabase → Authentication: enable Email and Google, turn **off** "Confirm email" (the free built-in mailer sends only ~2 emails per hour, which blocked sign-ups), set the Site URL to the Vercel URL, and add it plus `http://localhost:3000` to the redirect URLs. For Google, create an OAuth client in Google Cloud Console with redirect URI `https://<project>.supabase.co/auth/v1/callback` and paste its ID and secret into the Google provider. Without a key, the app runs in guest mode.
 
 ---
 
