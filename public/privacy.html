@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy · Swipetape</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>.policy{max-width:720px;margin:0 auto;padding:40px 20px 60px;line-height:1.6}.policy h1{font-size:32px}.policy h2{font-size:18px;margin-top:28px}.policy a{color:var(--brand-a)}</style>
+</head>
+<body>
+  <main class="policy">
+    <p><a href="/">← Back to Swipetape</a></p>
+    <h1>Privacy policy</h1>
+    <p>Swipetape is a student project for DTSC 3602 (Fall 2026, Group 10) at UNC Charlotte. It is not a commercial service.</p>
+    <h2>What we store</h2>
+    <ul>
+      <li><b>Account:</b> your email address and the name you give (or the name on your Google account if you sign in with Google). Passwords are handled by Supabase Auth and are never visible to us.</li>
+      <li><b>Your activity:</b> the songs you swipe (like, nope or love) and the songs you add to My List.</li>
+    </ul>
+    <p>Guests (not signed in) are not stored at all; their swipes stay in the browser tab.</p>
+    <h2>How it is used</h2>
+    <p>Only to run the app: to show your history and My List, to skip songs you already rated, and to send your liked songs to our recommendation model so it can suggest similar songs. We do not sell or share your data, show ads, or use it for anything else.</p>
+    <h2>Who processes it</h2>
+    <p>Data is stored in Supabase (database and sign-in). Recommendations run on Modal, which receives only song IDs, never your name or email. The site is hosted on Vercel. Song previews come from iTunes or Deezer and cover art from Spotify; your browser contacts those services directly when a preview or cover loads.</p>
+    <h2>Google sign-in</h2>
+    <p>If you choose "Continue with Google", we receive only your basic profile (name, email address and profile picture) to create your account. We request no other Google data.</p>
+    <h2>Deleting your data</h2>
+    <p>Email the group at <a href="mailto:britain.l.russell@gmail.com">britain.l.russell@gmail.com</a> and we will delete your account and everything linked to it. All project data will be deleted after the course ends (December 2026).</p>
+  </main>
+</body>
+</html>

@@ -6,7 +6,7 @@
 export const CONFIG = {
   API_URL: "https://bigb2405--swipetape-api-web.us-east.modal.run",
   SUPABASE_URL: "https://igwdtnmodzidwxnnwhtm.supabase.co",
-  GOOGLE_LOGIN: false,   // set to true once the Google provider is enabled in Supabase (Authentication > Providers)
+  GOOGLE_LOGIN: true,    // set to true once the Google provider is enabled in Supabase (Authentication > Providers)
   SUPABASE_PUBLISHABLE_KEY: "sb_publishable_PyAVpd6tUm5y_huVnwtxJg_lG3RFyVz",
 };
 
