@@ -102,9 +102,20 @@ async function loadSimilar(t) {
   }
 }
 
-function setSeed(trackId, { autoplay = true } = {}) {
-  const t = indexOf(trackId);
-  if (t === undefined) {   // e.g. an old link: only songs from songs.json or this session's results are known
+async function lookupById(trackId) {
+  // Songs outside songs.json (e.g. a shared link): get the title from Spotify, then let the API decide.
+  try {
+    const r = await fetch(`https://open.spotify.com/oembed?url=https://open.spotify.com/track/${trackId}`);
+    if (!r.ok) return undefined;
+    const j = await r.json();
+    return ensureRow({ track_id: trackId, track_name: j.title || "Unknown song", artist: "" });
+  } catch { return undefined; }
+}
+
+async function setSeed(trackId, { autoplay = true } = {}) {
+  let t = indexOf(trackId);
+  if (t === undefined && /^[A-Za-z0-9]{22}$/.test(trackId)) t = await lookupById(trackId);
+  if (t === undefined) {
     $("#simPick").hidden = false;
     $("#simSeed").hidden = true;
     $("#simOut").innerHTML = `<div class="error-state">We couldn't find that song. Search for it above.</div>`;
