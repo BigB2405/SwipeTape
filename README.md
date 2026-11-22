@@ -8,6 +8,26 @@ SwipeTape is a music discovery web app built around a Tinder-style swipe. Users 
 
 ---
 
+## D6 submission: final report and test results
+
+| Item | Link |
+|---|---|
+| Final report (PDF, 5 pages) | [`docs/D6_final_report.pdf`](docs/D6_final_report.pdf) · source [`docs/D6_final_report.md`](docs/D6_final_report.md) |
+| Branch / tag | branch `D6` · tag `d6-final` (after review) |
+| Final test code | [`scripts/final_test.py`](scripts/final_test.py) · [`scripts/plot_d6.py`](scripts/plot_d6.py) |
+| Results | [`reports/d6_summary.json`](reports/d6_summary.json) · [`reports/d6_results.csv`](reports/d6_results.csv) · [`reports/d6_spot_checks.md`](reports/d6_spot_checks.md) · figures `reports/figures/d6_*.png` |
+| Website / API / docs | https://swipetape-group10.vercel.app · https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
+| Postman | [`postman/`](postman/swipetape_api.postman_collection.json) · screenshots in [`docs/d5_screenshots/`](docs/d5_screenshots/) |
+
+- **Final test (reserved split, opened once on Nov 22, 2026; frozen `pipeline.joblib`, no refit):** 766 simulated listeners, 11,630 unseen-artist songs. M5 Recall@50 **0.145 [0.133, 0.158]** (validation 0.139) vs. popularity **0.006** (~26×) and the app's original method **0.088** (all p < 10⁻³⁴).
+- **Answer:** shared audio features of *liked* songs clearly improve the playlist; *disliked* songs do not (centroid −0.001, p = 0.99; kNN penalty −0.012, p < 0.001).
+- **Bias checks:** recommended songs have the catalog's median popularity (35 vs. 87 for the popularity baseline); M5 beats the app's method in all 11 genre families (reported with n and CIs); other-album Recall@50 0.119 shows it is not just matching album production.
+
+```bash
+uv run --frozen python scripts/final_test.py   # ~25 s, deterministic
+uv run --frozen python scripts/plot_d6.py
+```
+
 ## D5 submission: web app calling the live API
 
 | Item | Link |
@@ -261,7 +281,7 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 | D3 Model evaluation | Nov 16 | ✅ tag `d3-final` |
 | D4 Fitted scikit-learn pipeline + FastAPI on Modal | Nov 23 | ✅ tag `d4-final` |
 | D5 Vercel frontend calling the live API + Postman tests | Nov 30 | in progress, branch `D5` |
-| D6 Final report and demo (frozen model on reserved test data) | Dec 2 | planned |
+| D6 Final report and demo (frozen model on reserved test data) | Dec 2 | ✅ report on branch `D6`; presentation Dec 2 |
 
 ## Contributions and AI use
 
