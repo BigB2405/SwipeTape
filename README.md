@@ -46,7 +46,8 @@ The app has four tabs:
 
 - **Pipeline:** `Pipeline([("embed", SongEmbedder), ("rec", SwipeRecommender)])`, the M5 model selected in D3. `SongEmbedder` is the custom transformer: it learns a `StandardScaler` and a random forest that predicts each track's genre mix from its 9 audio features, and outputs `[weighted audio | genre mix]` embeddings. The bundle stores the fitted pipeline together with its metadata (versions, parameters, git commit, D3 validation score). It is about 100 MB, so it is not committed; `scripts/train_pipeline.py` rebuilds it in under a minute.
 - **API:** `GET /health`, `GET /pipeline/info`, `GET /sample`, `POST /recommend`. Invalid input returns **422** and a missing or incompatible model returns **503**; the server never returns a 500.
-- **Local = deployed:** `check_deployed.py` sends the same swipes to the Modal URL and to the local pipeline. The recommended tracks and their order match exactly, scores agree within 1e-4, and all 7 invalid inputs return 422: **ALL CHECKS PASSED** (Nov 18, 2026). 15/15 pytest tests pass.
+- **Local = deployed:** `check_deployed.py` sends the same swipes to the Modal URL and to the local pipeline. The recommended tracks and their order match exactly, scores agree within 1e-4, and all 7 invalid inputs return 422: **ALL CHECKS PASSED** (Nov 18, re-run Nov 22, 2026). 15/15 pytest tests pass.
+- **Note for grading:** since Nov 18 the same Modal URL runs the D5 version of `serve.py` (v0.5.0), which adds `GET /search` and CORS for the website. `/health`, `/pipeline/info`, `/sample` and `/recommend` and the fitted `pipeline.joblib` are unchanged, so the D4 checks above still apply. The bundle's `git_commit` (12019c5) is the commit the artifact was built from; `d4-final` (eacac83) changed only the Modal startup code.
 
 ## D3 submission: model evaluation
 
@@ -267,6 +268,6 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 - **D2:** Devanshi Parmar: data preparation, plotting, data dictionary, dashboard code, first draft of the data note. Britain Russell: Supabase setup and data load, Modal deployment, dashboard chart fix, finalizing the data note.
 - **D3:** Britain Russell: evaluation design, model and evaluation code, experiments, first versions of the modeling note. Devanshi Parmar: code review, reproducing the results, revising the modeling note.
 - **D5:** _[to confirm with group]_ Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, tests and Postman. Claude Code drafted the code.
-- **D4:** _[to confirm with group]_ pipeline refactor (`pipeline_def.py`), FastAPI service, Modal files, tests, Postman collection, and D4 note (GitHub `ashroff23`). Britain Russell: building and verifying the artifact, Modal deployment and fix, local-vs-deployed check.
+- **D4:** GitHub user `ashroff23`: pipeline refactor (`pipeline_def.py`), FastAPI service, Modal files, tests, Postman collection, and D4 note. Britain Russell: building and verifying the artifact, Modal deployment and fix, local-vs-deployed check.
 
 **AI assistance:** Claude Code helped draft the preparation, plotting, dashboard, model, and evaluation code, the notes, and this README, and helped review and reproduce the D3 results, and drafted the D4 API, deployment, tests, and checks. The group reviewed and ran all of it.
