@@ -6,6 +6,9 @@ Reads  pipeline.joblib (the D4 artifact, fit on train + val; never refit here),
        data/processed/test.parquet (opened for the first time in D6; only this script reads it).
 Writes reports/d6_summary.json, reports/d6_results.csv, reports/d6_spot_checks.md.
 
+Disclosed: the dislike block (M1d, M4 + dislike penalty) was added after the first run, to answer the
+question's dislike half on test; it uses its own random stream, so every other number is unchanged.
+
 Protocol = D3's song-level protocol unchanged (scripts/evaluate.py): simulated single-taste listeners
 (5 likes by one test artist) and 400 mixed-taste listeners (3 + 3 from two artists of different genre
 families), 5 dislikes each; the artists' other songs are hidden among all test tracks; Recall@50.
@@ -102,6 +105,20 @@ def main():
                                            [by["M1 Cosine centroid (app)"].kind == "mixed"].r50.to_numpy(), rng),
     }
 
+    # the question's dislike half: the D3 dislike variants with their D3-fixed settings (own RNG stream,
+    # so the numbers above are unaffected). Nothing is selected from this.
+    drng = np.random.default_rng(SEED + 1)
+    d_models = [CentroidRec(D3["chosen_configs"]["M1d"], 2, lam=float(D3["chosen_configs"]["M1d"].split("=")[1])),
+                SongKNNRec("M4 ablation lam=0.3", 99, m5.tau, 0.3)]
+    for m in d_models:
+        m.fit(fit)
+    dres = run_song(d_models, te, eps)
+    dby = {m: g.sort_values("episode") for m, g in dres.groupby("model")}
+    dislikes = {
+        "M1d_minus_M1": paired(dby[d_models[0].name].r50.to_numpy(), r50("M1 Cosine centroid (app)"), drng),
+        "M4_with_dislikes_minus_without": paired(dby[d_models[1].name].r50.to_numpy(), r50(m4), drng),
+        "r50": {m: round(g.r50.mean(), 4) for m, g in dby.items()}}
+
     # error analysis, each cell with its n
     r = res.copy()
     r["seed_pop_band"] = pd.cut(r.seed_pop, [-1, 19, 39, 61, 100], labels=["0-19", "20-39", "40-61", "62+"])
@@ -153,7 +170,7 @@ def main():
                       fit_tracks=fit.n, chance_r50=chance, catalog_pop_median=pop_med,
                       artifact=dict(model=m5.name, built_at=m5.meta["built_at"], git_commit=m5.meta["git_commit"])),
         test=test, validation_r50={n: val[n]["r50"] for n in names if n in val},
-        paired=comparisons, error_by_family=table("family", lambda x: x.kind == "single"),
+        paired=comparisons, dislike_effect=dislikes, error_by_family=table("family", lambda x: x.kind == "single"),
         m5_by_family_ci=fam_ci, error_by_seed_popularity=table("seed_pop_band"), error_by_kind=table("kind"),
         cold_start_r50=cold, exposure_top10=exposure, secondary_genre_protocol=secondary)
     REP.mkdir(exist_ok=True)
@@ -190,6 +207,7 @@ def main():
               f"  single={v['r50_single']:.4f} mixed={v['r50_mixed']:.4f}  otherAlbum={v['r50_other_album']:.4f}")
     for k, v in comparisons.items():
         print(f"  {k}: {v}")
+    print(f"  dislikes: {dislikes}")
     for n, v in exposure.items():
         print(f"  [exposure] {n:<26} {v}")
 

@@ -129,6 +129,28 @@
       "wilcoxon_p": 1.14e-23
     }
   },
+  "dislike_effect": {
+    "M1d_minus_M1": {
+      "mean_diff": -0.0012,
+      "ci95": [
+        -0.0062,
+        0.004
+      ],
+      "wilcoxon_p": 0.99
+    },
+    "M4_with_dislikes_minus_without": {
+      "mean_diff": -0.0123,
+      "ci95": [
+        -0.0196,
+        -0.0051
+      ],
+      "wilcoxon_p": 0.000654
+    },
+    "r50": {
+      "M1d lam=0.15": 0.0865,
+      "M4 ablation lam=0.3": 0.0971
+    }
+  },
   "error_by_family": {
     "Chill & Acoustic": {
       "n_users": 36,
