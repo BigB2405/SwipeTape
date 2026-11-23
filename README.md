@@ -6,6 +6,18 @@ SwipeTape is a music discovery web app built around a Tinder-style swipe. Users 
 
 **Research question:** Can shared musical features among songs a user likes or dislikes improve the quality of the personalized playlist produced by a swipe-based recommender?
 
+## Live app
+
+| | Link |
+|---|---|
+| **SwipeTape website** (public, no login) | https://swipetape-group10.vercel.app |
+| Vercel project settings | https://vercel.com/uncc3/swipetape/settings |
+| Vercel GitHub connection / production branch | https://vercel.com/uncc3/swipetape/settings/git |
+| Vercel domains | https://vercel.com/uncc3/swipetape/settings/domains |
+| Vercel deployments (build history) | https://vercel.com/uncc3/swipetape/deployments |
+
+The website is open to anyone. The Vercel dashboard links only open for accounts on the `uncc3` Vercel team. The site currently deploys from the `D5` branch while the redesign is finished, and it moves back to `main` at `d5-final`.
+
 ---
 
 ## D4 submission: fitted pipeline and API
