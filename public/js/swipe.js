@@ -4,9 +4,9 @@ import { $, $$, store, row, esc, shuffle, cleanName, firstArtist, norm, sleep, t
   ensureRow, tasteProfile, tasteHTML, indexOf, ID, NAME, ARTIST, POP, GENRE, EXPL, DUR, FEAT_COLS } from "./data.js";
 import { player, now, getPreview, stopAudio, syncPlayButtons, ICON_PAUSE, ICON_PLAY, ICON_REPLAY } from "./preview.js";
 import { api, capIds } from "./api.js";
-import { account, saveSwipe, removeSwipe, toggleMyList, signedIn, onAccountChange, likedEntries } from "./auth.js";
+import { account, saveSwipe, removeSwipe, toggleMyList, signedIn, onAccountChange } from "./auth.js";
 import { rowHTML, listBtn, hydrate, similarBtn, appleBtn } from "./ui.js";
-import { loadPrefs, langOk } from "./prefs.js";
+import { loadPrefs, langOk, previewLangOk } from "./prefs.js";
 
 const FEAT_W = [1.0, 1.2, 1.0, 1.0, 0.8, 0.6, 0.3, 0.5, 0.6];
 const PLAYLIST_LEN = 20;
@@ -81,7 +81,8 @@ async function buildDeck() {
   const worker = async () => {
     while (next < queue.length && state.deck.length < target) {
       const i = next++;
-      resolved[i] = (await getPreview(queue[i])) || null;
+      const pv = (await getPreview(queue[i])) || null;
+      resolved[i] = pv && previewLangOk(pv) ? pv : null;     // v2: song's own iTunes genre must fit the languages
       if (gen !== buildDeck.gen) return;
       publish();
       await sleep(150); // be polite to the iTunes API
@@ -307,7 +308,7 @@ function swipe(dir, from) {
   player.pause();
   setTimeout(() => renderDeck(), 280);
   if (dir === "nope") dropFrom(t);
-  else queueSimilar();
+  else queueSimilar(t);
 }
 
 /* ------------------------------------- v2: "more like this" cards after a like */
@@ -320,20 +321,22 @@ function dropFrom(t) {
 
 /** After a like/love: ask the model for songs like this round's likes and slot 2 of them in right after
  *  the card that is already showing behind the current one. Falls back to the in-browser formula. */
-async function queueSimilar() {
+async function queueSimilar(likedT) {
   const gen = (queueSimilar.gen = (queueSimilar.gen || 0) + 1);
-  const roundLikes = state.swipes.filter((s) => s.dir !== "nope").reverse();      // newest first
-  const liked = capIds([...roundLikes.map((s) => row(s.t)[ID]), ...likedEntries().map((e) => e.id)]);
-  const nopes = capIds(state.swipes.filter((s) => s.dir === "nope").map((s) => row(s.t)[ID]).filter((id) => !liked.includes(id)));
+  // Songs like THE song just liked (asking with every like at once drifted away from it), minus this round's passes
+  const likedId = row(likedT)[ID];
+  const nopes = capIds(state.swipes.filter((s) => s.dir === "nope").map((s) => row(s.t)[ID]));
   let recs;
   try {
-    recs = (await api.recommend(liked, nopes, 12)).map((r) => ({ t: ensureRow(r), because: indexOf(r.because_you_liked) }));
+    recs = (await api.recommend([likedId], nopes, 20)).map((r) => ({ t: ensureRow(r), because: likedT }));
   } catch {
-    try { recs = localRecommend(state.swipes).map((x) => ({ t: x.t, because: x.because })); } catch { return; }
+    try { recs = localRecommend([{ t: likedT, dir: "like" }]).map((x) => ({ t: x.t, because: likedT })); } catch { return; }
   }
   if (gen !== queueSimilar.gen || state.idx >= state.deckSize) return;
   const queued = new Set(state.deck.map((d) => d.t));
-  const artists = new Set(state.deck.slice(state.idx).map((d) => firstArtist(row(d.t)[ARTIST])));
+  // no repeats: skip the liked song's artist, artists already seen this round, and artists queued ahead
+  const artists = new Set([...state.deck.slice(0, state.deck.length).map((d) => firstArtist(row(d.t)[ARTIST])),
+                           firstArtist(row(likedT)[ARTIST])]);
   const picks = [];
   for (const r of recs) {
     if (r.t === undefined || queued.has(r.t) || state.seen.has(r.t) || account.swipes.has(row(r.t)[ID])) continue;
@@ -341,7 +344,7 @@ async function queueSimilar() {
     if (artists.has(a)) continue;
     const pv = await getPreview(r.t);
     if (gen !== queueSimilar.gen) return;
-    if (!pv?.preview) continue;
+    if (!pv?.preview || !previewLangOk(pv)) continue;
     artists.add(a);
     picks.push({ t: r.t, ...pv, because: r.because, similar: true });
     preloadImg(pv.art);

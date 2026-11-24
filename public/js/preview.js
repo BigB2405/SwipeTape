@@ -27,7 +27,8 @@ async function lookupITunes(r) {
     withPrev.find((x) => norm(x.artistName).includes(na) && nn.startsWith(norm(cleanName(x.trackName))));
   if (!hit) return null;
   return { preview: hit.previewUrl, art: hit.artworkUrl100?.replace("100x100bb", "600x600bb") || null,
-           apple: hit.trackViewUrl || null };   // v2: the song's Apple Music page
+           apple: hit.trackViewUrl || null,     // v2: the song's Apple Music page
+           genre: hit.primaryGenreName || null }; // v2: e.g. "Punjabi Pop", used for the language check
 }
 
 async function lookupDeezer(r) {
