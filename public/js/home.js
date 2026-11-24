@@ -5,6 +5,7 @@ import { ICON_PLAY } from "./preview.js";
 import { tileHTML, hydrate, listBtn, similarBtn } from "./ui.js";
 import { api, capIds } from "./api.js";
 import { account, onAccountChange, likedEntries, signedIn } from "./auth.js";
+import { loadPrefs, langOk } from "./prefs.js";
 
 const ROW_LEN = 20;
 let built = false;
@@ -42,21 +43,25 @@ function heroHTML(t) {
 
 function buildStatic() {
   const { families } = store.data;
-  const trending = topTracks(() => true, ROW_LEN);
+  const trending = topTracks((i) => langOk(i), ROW_LEN);
   const featured = shuffle(trending.slice(0, 12))[0];
   $("#homeHero").innerHTML = heroHTML(featured);
 
   // Mid-popularity songs, shuffled: a counterweight to rows that only show hits (popularity bias).
-  const pool = shuffle(store.data.tracks.map((_, i) => i).filter((i) => row(i)[POP] >= 40 && row(i)[POP] <= 55));
+  const pool = shuffle(store.data.tracks.map((_, i) => i).filter((i) => row(i)[POP] >= 40 && row(i)[POP] <= 55 && langOk(i)));
   const seenA = new Set(), gems = [];
   for (const i of pool) { const a = firstArtist(row(i)[ARTIST]); if (seenA.has(a)) continue; seenA.add(a); gems.push(i); if (gems.length === ROW_LEN) break; }
 
-  const fam = families.map((name, f) => ({ name, f })).filter((x) => x.name !== "Other");
+  // v2: the survey's groups come first; "Kids & Sleep" only if picked; rows follow the chosen languages
+  const prefs = loadPrefs();
+  const fam = families.map((name, f) => ({ name, f }))
+    .filter((x) => x.name !== "Other" && (x.name !== "Kids & Sleep" || prefs.families.includes(x.name)))
+    .sort((a, b) => prefs.families.includes(b.name) - prefs.families.includes(a.name));
   $("#homeShelves").innerHTML =
     shelfHTML("Trending now", trending.map((t) => tileHTML(t)).join("")) +
-    fam.slice(0, 3).map(({ name, f }) => shelfHTML(`Top ${esc(name)}`, topTracks((i) => familyOf(i) === f, ROW_LEN).map((t) => tileHTML(t)).join(""))).join("") +
+    fam.slice(0, 3).map(({ name, f }) => shelfHTML(`Top ${esc(name)}`, topTracks((i) => familyOf(i) === f && langOk(i), ROW_LEN).map((t) => tileHTML(t)).join(""))).join("") +
     shelfHTML("Hidden gems", gems.map((t) => tileHTML(t)).join(""), { sub: "Less-played songs, picked at random" }) +
-    fam.slice(3).map(({ name, f }) => shelfHTML(`Top ${esc(name)}`, topTracks((i) => familyOf(i) === f, ROW_LEN).map((t) => tileHTML(t)).join(""))).join("");
+    fam.slice(3).map(({ name, f }) => shelfHTML(`Top ${esc(name)}`, topTracks((i) => familyOf(i) === f && langOk(i), ROW_LEN).map((t) => tileHTML(t)).join(""))).join("");
   hydrate($("#tab-home"));
   built = true;
 }
@@ -102,6 +107,7 @@ const markDirty = () => {
 };
 onAccountChange(markDirty);
 document.addEventListener("swipetape:swiped", () => { dirty = true; });
+document.addEventListener("swipetape:prefs", () => { built = false; dirty = true; });   // survey redone: rebuild rows
 
 document.addEventListener("click", (e) => {
   const a = e.target.closest(".shelf-arrow");

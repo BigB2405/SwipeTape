@@ -3,12 +3,24 @@ import { $, store, row, esc, shuffle, cleanName, fallbackArt, tagsFor, spotifyUr
   ID, NAME, ARTIST, POP, EXPL } from "./data.js";
 import { togglePreview, now, player } from "./preview.js";
 import { api } from "./api.js";
+import { CONFIG } from "../config.js";
+import { myLanguages, LANG_NAMES } from "./prefs.js";
 import { playBtn, listBtn, rowHTML, hydrate, ICON_SPARK } from "./ui.js";
 
 const K = 5;
 const searchEl = $("#simSearch");
 let seed = null;            // track index of the current seed
 let searchSeq = 0, recSeq = 0, timer = null;
+let anyLanguage = false;    // v2: "Any language" / "My languages" toggle (only with the v2 API and survey languages)
+
+function langToggleHTML() {
+  const mine = myLanguages();
+  if (!CONFIG.API_V2 || !mine.length) return "";
+  const names = mine.map((c) => LANG_NAMES[c] || c).join(", ");
+  return `<div class="chips lang-toggle" role="radiogroup" aria-label="Song languages">
+    <button class="chip${anyLanguage ? "" : " on"}" role="radio" aria-checked="${!anyLanguage}" data-anylang="0" title="${esc(names)}">My languages</button>
+    <button class="chip${anyLanguage ? " on" : ""}" role="radio" aria-checked="${anyLanguage}" data-anylang="1">Any language</button></div>`;
+}
 
 /* ------------------------------------------------------------ search */
 function renderQuickPicks() {
@@ -84,15 +96,16 @@ function resultCard(r, n) {
 async function loadSimilar(t) {
   const seq = ++recSeq;
   const box = $("#simOut");
-  box.innerHTML = `<div class="sim-head"><h3>5 songs you'd also like</h3></div>
+  box.innerHTML = `<div class="sim-head"><h3>5 songs you'd also like</h3>${langToggleHTML()}</div>
     <div class="simgrid">${Array.from({ length: K }, () => '<div class="simcard skel"><div class="simcard-art"></div><div class="simcard-body"><i></i><i></i></div></div>').join("")}</div>
     <p class="sim-status" id="simStatus"><span class="spinner sm"></span> Asking the model for the 5 closest songs…</p>`;
   try {
     const recs = await api.recommend([row(t)[ID]], [], K, {
+      anyLanguage,
       onSlow: () => { const s = $("#simStatus"); if (s && seq === recSeq) s.innerHTML = '<span class="spinner sm"></span> Waking up the model. The first request can take up to 30 seconds…'; },
     });
     if (seq !== recSeq) return;
-    box.innerHTML = `<div class="sim-head"><h3>5 songs you'd also like</h3>
+    box.innerHTML = `<div class="sim-head"><h3>5 songs you'd also like</h3>${langToggleHTML()}
         <span class="sim-note">From the SwipeTape song kNN model (live API). Similarity combines audio features and genre.</span></div>
       <div class="simgrid">${recs.map(resultCard).join("")}</div>`;
     hydrate(box);
@@ -151,6 +164,8 @@ document.addEventListener("click", (e) => {
   if (r && !e.target.closest("[data-play]")) { setSeed(r.dataset.seedRow); return; }
   if (e.target.closest("#simClear")) clearSeed();
   if (e.target.closest("#simRetry") && seed !== null) loadSimilar(seed);
+  const lt = e.target.closest("[data-anylang]");
+  if (lt && seed !== null) { anyLanguage = lt.dataset.anylang === "1"; loadSimilar(seed); }
   if (e.target.closest("[data-retry-search]")) runSearch(searchEl.value.trim());
 });
 

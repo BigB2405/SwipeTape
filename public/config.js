@@ -8,7 +8,8 @@ export const CONFIG = {
   SUPABASE_URL: "https://igwdtnmodzidwxnnwhtm.supabase.co",
   GOOGLE_LOGIN: true,    // set to true once the Google provider is enabled in Supabase (Authentication > Providers)
   SUPABASE_PUBLISHABLE_KEY: "sb_publishable_PyAVpd6tUm5y_huVnwtxJg_lG3RFyVz",
+  API_V2: false,         // v2 API (serve.py 0.6.0+) accepts `languages` on /recommend; the live D4/D5 API does not
 };
 
 // Local development: `?api=local` talks to `uv run --frozen uvicorn serve:app` on port 8000.
-if (new URLSearchParams(location.search).get("api") === "local") CONFIG.API_URL = "http://127.0.0.1:8000";
+if (new URLSearchParams(location.search).get("api") === "local") { CONFIG.API_URL = "http://127.0.0.1:8000"; CONFIG.API_V2 = true; }

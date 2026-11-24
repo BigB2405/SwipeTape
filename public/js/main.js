@@ -10,6 +10,7 @@ import { home } from "./home.js";
 import { swipeTab } from "./swipe.js";
 import { similar } from "./similar.js";
 import { profile } from "./profile.js";
+import { needsSurvey, openSurvey, restoreGuestSeeds } from "./onboarding.js";
 
 const TABS = { home, swipe: swipeTab, similar, me: profile };
 let current = null;
@@ -52,8 +53,10 @@ onAccountChange(() => {
   }
   $("#boot").hidden = true;
   await initAuth();
+  restoreGuestSeeds();
   const back = sessionStorage.getItem("swipetape.afterLogin");    // returning from Google sign-in
   if (back && account.user) { sessionStorage.removeItem("swipetape.afterLogin"); history.replaceState(null, "", location.pathname + back); }
   window.addEventListener("hashchange", route);
   route();
+  if (needsSurvey()) openSurvey();
 })();

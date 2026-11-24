@@ -1,6 +1,7 @@
 /* Calls to the live SwipeTape API on Modal (serve.py). Every failure becomes an ApiError with a message
  * a person can read; callers show it as an error state. */
 import { CONFIG } from "../config.js";
+import { myLanguages } from "./prefs.js";
 
 export class ApiError extends Error {
   constructor(message, status = 0) { super(message); this.status = status; }
@@ -50,9 +51,14 @@ export const api = {
   health: () => request("/health"),
   /** -> [{track_id, track_name, artist, match}] (match 0 = exact title ... 4 = words found anywhere) */
   search: (q, limit = 15, opts) => request(`/search?q=${encodeURIComponent(q)}&limit=${limit}`, opts).then((r) => r.tracks),
-  /** -> [{track_id, track_name, artist, score, because_you_liked}] */
-  recommend: (liked_ids, disliked_ids = [], k = 10, opts) =>
-    request("/recommend", { method: "POST", body: { liked_ids, disliked_ids, k }, ...opts }).then((r) => r.recommendations),
+  /** -> [{track_id, track_name, artist, score, because_you_liked}]
+   *  With the v2 API, the survey's languages are sent too (opts.anyLanguage = true leaves them out). */
+  recommend: (liked_ids, disliked_ids = [], k = 10, opts = {}) => {
+    const { anyLanguage, ...rest } = opts;
+    const languages = CONFIG.API_V2 && !anyLanguage ? myLanguages() : [];
+    const body = { liked_ids, disliked_ids, k, ...(languages.length ? { languages } : {}) };
+    return request("/recommend", { method: "POST", body, ...rest }).then((r) => r.recommendations);
+  },
 };
 
 /** The API limits each list to 25 unique ids. Keeps the first occurrence, in order. */

@@ -554,3 +554,33 @@ body[data-tab="swipe"] .nowbar { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
 }
+
+/* ---------- v2: taste survey (js/onboarding.js) ---------- */
+.onboard { position: fixed; inset: 0; z-index: 60; background: var(--bg); overflow-y: auto; }
+.ob-panel { max-width: 720px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; padding: 18px 20px 24px; }
+.ob-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
+.ob-top .linkbtn { text-decoration: none; color: var(--muted); }
+.ob-dots { display: flex; gap: 6px; }
+.ob-dots i { width: 28px; height: 5px; border-radius: 3px; background: var(--surface-2); }
+.ob-dots i.on { background: var(--brand); }
+.ob-body { flex: 1; padding: 22px 0 10px; }
+.ob-body h2 { font-size: clamp(24px, 4vw, 32px); margin: 0 0 8px; }
+.ob-body .sub { max-width: 52ch; margin-bottom: 20px; }
+.ob-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.ob-chip { padding: 11px 18px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 700; font-size: 15px; color: var(--text); }
+.ob-chip.on { border-color: transparent; background: var(--brand); color: #fff; box-shadow: 0 4px 14px rgba(253, 38, 122, .3); }
+.fine.left { text-align: left; }
+.ob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
+.ob-song { cursor: pointer; border-radius: 12px; outline-offset: 3px; }
+.ob-art { position: relative; aspect-ratio: 1; border-radius: 12px; background-size: cover; background-position: center; box-shadow: var(--card-shadow); transition: transform .15s; }
+.ob-song:hover .ob-art { transform: scale(1.03); }
+.ob-song.on .ob-art { outline: 3px solid var(--like); }
+.ob-check { position: absolute; left: 8px; top: 8px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--like); color: #062; opacity: 0; transform: scale(.6); transition: .15s; }
+.ob-song.on .ob-check { opacity: 1; transform: none; }
+.ob-play { position: absolute; right: 8px; bottom: 8px; }
+.ob-t { font-weight: 700; font-size: 14px; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ob-a { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ob-more { display: block; margin: 18px auto 0; }
+.ob-foot { position: sticky; bottom: 0; padding: 14px 0 4px; background: linear-gradient(transparent, var(--bg) 30%); display: flex; justify-content: center; }
+.lang-toggle { display: inline-flex; margin-left: auto; }
+.lang-toggle .chip { padding: 6px 12px; font-size: 13px; }

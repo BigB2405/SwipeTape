@@ -6,6 +6,7 @@ import { player, now, getPreview, stopAudio, syncPlayButtons, ICON_PAUSE, ICON_P
 import { api, capIds } from "./api.js";
 import { account, saveSwipe, removeSwipe, toggleMyList, signedIn, onAccountChange } from "./auth.js";
 import { rowHTML, listBtn, hydrate, similarBtn } from "./ui.js";
+import { loadPrefs, langOk } from "./prefs.js";
 
 const FEAT_W = [1.0, 1.2, 1.0, 1.0, 0.8, 0.6, 0.3, 0.5, 0.6];
 const PLAYLIST_LEN = 20;
@@ -27,27 +28,36 @@ const state = {
 /* ------------------------------------------------------------ deck build */
 function pickCandidates(count) {
   const { tracks, genreFamily, families } = store.data;
-  const other = families.indexOf("Other");
+  const prefs = loadPrefs();
+  const chosen = prefs.families.map((f) => families.indexOf(f)).filter((i) => i >= 0);
+  // "Other" never goes in the deck; "Kids & Sleep" only if the survey picked it (v2)
+  const kids = families.indexOf("Kids & Sleep");
+  const hidden = new Set([families.indexOf("Other"), ...(chosen.includes(kids) ? [] : [kids])]);
   const byFam = families.map(() => []);
   tracks.forEach((r, t) => {
-    if (r[POP] >= DECK_POOL_MIN_POP && !state.seen.has(t) && !account.swipes.has(r[ID])) byFam[genreFamily[r[GENRE]]].push(t);
+    if (r[POP] >= DECK_POOL_MIN_POP && !state.seen.has(t) && !account.swipes.has(r[ID]) && langOk(t, prefs.languages)) byFam[genreFamily[r[GENRE]]].push(t);
   });
   byFam.forEach(shuffle);
-  const famOrder = shuffle(families.map((_, i) => i).filter((i) => i !== other && byFam[i].length));
   const usedGenres = new Set(), usedArtists = new Set(), out = [];
-  for (let round = 0; out.length < count && round < 40; round++) {
-    for (const f of famOrder) {
-      if (out.length >= count) break;
-      const list = byFam[f];
-      const k = list.findIndex((t) => !usedArtists.has(firstArtist(tracks[t][ARTIST])) && (round > 1 || !usedGenres.has(tracks[t][GENRE])));
-      if (k < 0) continue;
-      const t = list.splice(k, 1)[0];
-      usedArtists.add(firstArtist(tracks[t][ARTIST]));
-      usedGenres.add(tracks[t][GENRE]);
-      out.push(t);
+  const fill = (fams, upTo) => {
+    const famOrder = shuffle(fams.filter((i) => !hidden.has(i) && byFam[i].length));
+    for (let round = 0; out.length < upTo && round < 40; round++) {
+      for (const f of famOrder) {
+        if (out.length >= upTo) break;
+        const list = byFam[f];
+        const k = list.findIndex((t) => !usedArtists.has(firstArtist(tracks[t][ARTIST])) && (round > 1 || !usedGenres.has(tracks[t][GENRE])));
+        if (k < 0) continue;
+        const t = list.splice(k, 1)[0];
+        usedArtists.add(firstArtist(tracks[t][ARTIST]));
+        usedGenres.add(tracks[t][GENRE]);
+        out.push(t);
+      }
     }
-  }
-  return out;
+  };
+  // v2: about 80% from the survey's groups, the rest from everything (so new genres still show up)
+  if (chosen.length) fill(chosen, Math.ceil(count * 0.8));
+  fill(families.map((_, i) => i), count);
+  return shuffle(out);
 }
 
 function notifyDeck() { state.deckWaiters.splice(0).forEach((fn) => fn()); updateStartBtn(); }
