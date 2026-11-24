@@ -2,7 +2,7 @@
 import { CONFIG } from "../config.js";
 import { $, esc, indexOf, tasteProfile, tasteHTML, spotifyUrl, toast } from "./data.js";
 import { account, onAccountChange, signIn, signUp, signInWithGoogle, signOut, likedEntries, displayName } from "./auth.js";
-import { rowHTML, listBtn, similarBtn, hydrate } from "./ui.js";
+import { rowHTML, listBtn, similarBtn, hydrate, appleBtn } from "./ui.js";
 import { openSurvey } from "./onboarding.js";
 
 const GOOGLE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>';
@@ -52,7 +52,7 @@ function meHTML() {
     ${taste ? `<div class="taste">${tasteHTML(taste)}</div>` : ""}
     <section class="me-sec">
       <div class="pl-head"><h3>My List</h3><span>${list.length} songs</span></div>
-      ${list.length ? `<ol class="playlist">${list.map((t) => rowHTML(t, { right: `<span class="row-btns">${listBtn(t, "browse")}<a class="sp" href="${spotifyUrl(t)}" target="_blank" rel="noopener">Spotify</a></span>` })).join("")}</ol>
+      ${list.length ? `<ol class="playlist">${list.map((t) => rowHTML(t, { right: `<span class="row-btns">${listBtn(t, "browse")}<a class="sp" href="${spotifyUrl(t)}" target="_blank" rel="noopener">Spotify</a>${appleBtn(t)}</span>` })).join("")}</ol>
         <button class="ghost-sm" id="copyListBtn">Copy Spotify links</button>`
       : '<p class="empty-state small">Nothing saved yet. Tap <b>+</b> on any song to add it here.</p>'}
     </section>

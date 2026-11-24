@@ -1,6 +1,6 @@
 /* Pieces shared by the tabs: poster tiles, list rows, My List buttons and the song detail sheet. */
 import { $, $$, row, esc, fallbackArt, tagsFor, spotifyUrl, cleanName, NAME, ARTIST, ALBUM, EXPL, ID } from "./data.js";
-import { ICON_PLAY, observeArt, syncPlayButtons } from "./preview.js";
+import { ICON_PLAY, observeArt, syncPlayButtons, getAppleUrl } from "./preview.js";
 import { inMyList, toggleMyList, onAccountChange } from "./auth.js";
 
 const ICON_PLUS = '<svg viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>';
@@ -46,7 +46,17 @@ export function rowHTML(t, { n, why = "", right = "", attrs = "" } = {}) {
   </li>`;
 }
 
-export function hydrate(root) { observeArt(root); syncPlayButtons(); }
+/** v2: "Apple Music" link, hidden until hydrate() finds the song on iTunes. */
+export const appleBtn = (t, label = "Apple Music") =>
+  `<a class="sp am" data-apple="${t}" target="_blank" rel="noopener" hidden>${label}</a>`;
+function fillApple(root) {
+  for (const a of $$("[data-apple]:not([data-apple-seen])", root)) {
+    a.dataset.appleSeen = "1";
+    getAppleUrl(+a.dataset.apple).then((url) => { if (url) { a.href = url; a.hidden = false; } });
+  }
+}
+
+export function hydrate(root) { observeArt(root); syncPlayButtons(); fillApple(root); }
 
 /* ---------------------------------------------------- My List buttons */
 document.addEventListener("click", async (e) => {
@@ -83,6 +93,7 @@ export function openSheet(t) {
         ${similarBtn(t)}
         ${listBtn(t, "browse", true)}
         <a class="sp" href="${spotifyUrl(t)}" target="_blank" rel="noopener">Open in Spotify</a>
+        ${appleBtn(t, "Open in Apple Music")}
       </div>
     </div>`;
   sheet.hidden = false;

@@ -5,7 +5,7 @@ import { togglePreview, now, player } from "./preview.js";
 import { api } from "./api.js";
 import { CONFIG } from "../config.js";
 import { myLanguages, LANG_NAMES } from "./prefs.js";
-import { playBtn, listBtn, rowHTML, hydrate, ICON_SPARK } from "./ui.js";
+import { playBtn, listBtn, rowHTML, hydrate, ICON_SPARK, appleBtn } from "./ui.js";
 
 const K = 5;
 const searchEl = $("#simSearch");
@@ -72,7 +72,7 @@ function seedHTML(t) {
       <h2>${esc(r[NAME])}</h2>
       <p class="seed-artist">${esc(r[ARTIST])}</p>
       <div class="meta">${r[EXPL] ? '<span class="tag e">E</span>' : ""}${tagsFor(t).map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div>
-      <div class="seed-actions">${listBtn(t, "similar", true)}<a class="sp" href="${spotifyUrl(t)}" target="_blank" rel="noopener">Spotify</a>
+      <div class="seed-actions">${listBtn(t, "similar", true)}<a class="sp" href="${spotifyUrl(t)}" target="_blank" rel="noopener">Spotify</a>${appleBtn(t)}
       <button class="linkbtn" id="simClear">Pick another song</button></div>
     </div>`;
 }
@@ -88,7 +88,7 @@ function resultCard(r, n) {
       <div class="simcard-t" title="${esc(x[NAME])}">${esc(x[NAME])}</div>
       <div class="simcard-a">${esc(x[ARTIST])}</div>
       <div class="simcard-score"><div class="bar"><i style="width:${Math.max(0, Math.min(100, r.score * 100))}%"></i></div><span>${Math.round(r.score * 100)}% similar</span></div>
-      <div class="simcard-btns">${listBtn(t, "similar")}<a class="simbtn sm" href="#/similar/${x[ID]}" title="Find songs like this one">${ICON_SPARK}<span>More like this</span></a><a class="sp" href="${spotifyUrl(t)}" target="_blank" rel="noopener">Spotify</a></div>
+      <div class="simcard-btns">${listBtn(t, "similar")}<a class="simbtn sm" href="#/similar/${x[ID]}" title="Find songs like this one">${ICON_SPARK}<span>More like this</span></a><a class="sp" href="${spotifyUrl(t)}" target="_blank" rel="noopener">Spotify</a>${appleBtn(t)}</div>
     </div>
   </article>`;
 }

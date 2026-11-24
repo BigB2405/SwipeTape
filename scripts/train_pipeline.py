@@ -23,7 +23,7 @@ import sklearn
 from sklearn.pipeline import Pipeline
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pipeline_def import FEATS, SongEmbedder, SwipeRecommender  # noqa: E402  (pickled by this module name)
+from pipeline_def import FEATS, SongEmbedder, SwipeRecommender, estimate_langs, load_itunes_cache  # noqa: E402
 
 OUT = Path("pipeline.joblib")   # repo root, next to serve.py (gitignored; rebuild with this script)
 OUT_V2 = Path("pipeline_v2.joblib")
@@ -53,6 +53,9 @@ def main():
 
     if v2:
         p = dict(V2)
+        itunes = load_itunes_cache()
+        cat["langs"] = estimate_langs(cat, itunes)
+        p["itunes_artists_cached"] = len(itunes)
         pipe = Pipeline([("embed", SongEmbedder(alpha=p["alpha"], genre_source="labels")),
                          ("rec", SwipeRecommender(tau=p["tau"], lam=p["lam"], pop_w=p["pop_w"],
                                                   hide_unless_seeded=tuple(p["hide_unless_seeded"]),

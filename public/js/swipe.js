@@ -4,8 +4,8 @@ import { $, $$, store, row, esc, shuffle, cleanName, firstArtist, norm, sleep, t
   ensureRow, tasteProfile, tasteHTML, indexOf, ID, NAME, ARTIST, POP, GENRE, EXPL, DUR, FEAT_COLS } from "./data.js";
 import { player, now, getPreview, stopAudio, syncPlayButtons, ICON_PAUSE, ICON_PLAY, ICON_REPLAY } from "./preview.js";
 import { api, capIds } from "./api.js";
-import { account, saveSwipe, removeSwipe, toggleMyList, signedIn, onAccountChange } from "./auth.js";
-import { rowHTML, listBtn, hydrate, similarBtn } from "./ui.js";
+import { account, saveSwipe, removeSwipe, toggleMyList, signedIn, onAccountChange, likedEntries } from "./auth.js";
+import { rowHTML, listBtn, hydrate, similarBtn, appleBtn } from "./ui.js";
 import { loadPrefs, langOk } from "./prefs.js";
 
 const FEAT_W = [1.0, 1.2, 1.0, 1.0, 0.8, 0.6, 0.3, 0.5, 0.6];
@@ -138,6 +138,7 @@ function makeCard(item) {
       <h2 class="title">${esc(r[NAME])}</h2>
       <p class="artist">${esc(r[ARTIST])}</p>
       <div class="meta">${r[EXPL] ? '<span class="tag e">E</span>' : ""}${tagsFor(item.t).map((x) => `<span class="tag">${esc(x)}</span>`).join("")}</div>
+      ${item.similar && item.because !== undefined ? `<p class="because">Because you liked <b>${esc(cleanName(row(item.because)[NAME]))}</b></p>` : ""}
     </div>`;
   const img = el.querySelector("img");
   if (img) {
@@ -305,6 +306,60 @@ function swipe(dir, from) {
   document.dispatchEvent(new CustomEvent("swipetape:swiped"));
   player.pause();
   setTimeout(() => renderDeck(), 280);
+  if (dir === "nope") dropFrom(t);
+  else queueSimilar();
+}
+
+/* ------------------------------------- v2: "more like this" cards after a like */
+const SIMILAR_PER_LIKE = 2, MAX_SIMILAR_RUN = 2;   // at most 2 similar cards in a row, then a random one
+
+/** Songs queued because of a song the user then passed on are taken out again (if not shown yet). */
+function dropFrom(t) {
+  for (let i = state.deck.length - 1; i > state.idx; i--) if (state.deck[i].similar && state.deck[i].because === t) state.deck.splice(i, 1);
+}
+
+/** After a like/love: ask the model for songs like this round's likes and slot 2 of them in right after
+ *  the card that is already showing behind the current one. Falls back to the in-browser formula. */
+async function queueSimilar() {
+  const gen = (queueSimilar.gen = (queueSimilar.gen || 0) + 1);
+  const roundLikes = state.swipes.filter((s) => s.dir !== "nope").reverse();      // newest first
+  const liked = capIds([...roundLikes.map((s) => row(s.t)[ID]), ...likedEntries().map((e) => e.id)]);
+  const nopes = capIds(state.swipes.filter((s) => s.dir === "nope").map((s) => row(s.t)[ID]).filter((id) => !liked.includes(id)));
+  let recs;
+  try {
+    recs = (await api.recommend(liked, nopes, 12)).map((r) => ({ t: ensureRow(r), because: indexOf(r.because_you_liked) }));
+  } catch {
+    try { recs = localRecommend(state.swipes).map((x) => ({ t: x.t, because: x.because })); } catch { return; }
+  }
+  if (gen !== queueSimilar.gen || state.idx >= state.deckSize) return;
+  const queued = new Set(state.deck.map((d) => d.t));
+  const artists = new Set(state.deck.slice(state.idx).map((d) => firstArtist(row(d.t)[ARTIST])));
+  const picks = [];
+  for (const r of recs) {
+    if (r.t === undefined || queued.has(r.t) || state.seen.has(r.t) || account.swipes.has(row(r.t)[ID])) continue;
+    const a = firstArtist(row(r.t)[ARTIST]);
+    if (artists.has(a)) continue;
+    const pv = await getPreview(r.t);
+    if (gen !== queueSimilar.gen) return;
+    if (!pv?.preview) continue;
+    artists.add(a);
+    picks.push({ t: r.t, ...pv, because: r.because, similar: true });
+    preloadImg(pv.art);
+    if (picks.length === SIMILAR_PER_LIKE) break;
+  }
+  // Positions idx (showing) and idx+1 (behind it) are on screen already; insert from idx+2, keeping
+  // at most MAX_SIMILAR_RUN similar cards in a row so a random card still comes up now and then.
+  let pos = state.idx + 2;
+  for (const pick of picks) {
+    for (;;) {
+      let run = 0;
+      for (let i = pos - 1; i >= state.idx && state.deck[i]?.similar; i--) run++;
+      if (run < MAX_SIMILAR_RUN || pos >= state.deck.length) break;
+      pos++;
+    }
+    state.deck.splice(Math.min(pos, state.deck.length), 0, pick);
+    pos++;
+  }
 }
 
 function rewind() {
@@ -461,7 +516,7 @@ async function finish() {
   $("#playlist").innerHTML = picks.map((p, n) => rowHTML(p.t, {
     n: n + 1,
     why: p.because !== undefined && p.because !== null ? `Because you liked <b>${esc(cleanName(row(p.because)[NAME]))}</b>` : "",
-    right: `<span class="pct">${p.label}</span><span class="row-btns">${listBtn(p.t, "swipe")}<a class="sp" href="${spotifyUrl(p.t)}" target="_blank" rel="noopener">Spotify</a></span>`,
+    right: `<span class="pct">${p.label}</span><span class="row-btns">${listBtn(p.t, "swipe")}<a class="sp" href="${spotifyUrl(p.t)}" target="_blank" rel="noopener">Spotify</a>${appleBtn(p.t)}</span>`,
   })).join("");
   hydrate($("#resultScreen"));
 }
@@ -488,6 +543,7 @@ async function saveAll() {
 /* ------------------------------------------------------------- startup */
 function startSwiping() {
   if (!state.deck[0]) return;
+  queueSimilar.gen = (queueSimilar.gen || 0) + 1;   // ignore answers from a previous round
   state.idx = 0;
   state.swipes = [];
   show("swipeScreen");

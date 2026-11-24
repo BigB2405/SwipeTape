@@ -43,7 +43,7 @@ SEED = 42
 LANG_OF_GENRE = {
     **dict.fromkeys(["spanish", "latin", "latino", "reggaeton", "salsa", "tango"], "es"),
     **dict.fromkeys(["brazil", "mpb", "pagode", "samba", "sertanejo", "forro"], "pt"),
-    "indian": "hi",
+    "indian": "hi", "pop-film": "hi",      # pop-film in this dataset is Indian film music (A.R. Rahman, Thaman S, ...)
     **dict.fromkeys(["j-pop", "j-rock", "j-idol", "j-dance", "anime"], "ja"),
     "k-pop": "ko",
     **dict.fromkeys(["cantopop", "mandopop"], "zh"),
@@ -55,7 +55,24 @@ SCRIPT_LANG = [(re.compile("[\uac00-\ud7af\u1100-\u11ff]"), "ko"),
                (re.compile("[\u4e00-\u9fff]"), "zh"),
                (re.compile("[\u0600-\u06ff]"), "ar"),
                (re.compile("[\u0400-\u04ff]"), "ru")]
-LANGS = ["en", "es", "pt", "hi", "ja", "ko", "zh", "fr", "it", "de", "sv", "tr", "ms", "fa", "ar", "ru"]
+LANGS = ["en", "es", "pt", "hi", "ja", "ko", "zh", "fr", "it", "de", "sv", "tr", "ms", "fa", "ar", "ru", "xx"]
+# en = English (or no signal), hi = Hindi / Punjabi / other Indian languages, xx = some other non-English
+# language (iTunes files the artist under "Worldwide")
+
+# iTunes artist genre -> language (checked by prefix, lower case). Used for artists with no other signal.
+ITUNES_GENRE_LANG = [
+    (("punjabi", "regional indian", "indian", "bollywood", "tamil", "telugu", "malayalam", "kannada", "bengali",
+      "ghazal", "sufi", "devotional & spiritual", "carnatic", "hindustani"), "hi"),
+    (("latin", "urbano latino", "música mexicana", "musica mexicana", "regional mexicano", "reggaeton",
+      "salsa", "pop latino", "flamenco", "tango", "cumbia", "bachata"), "es"),
+    (("brazilian", "mpb", "sertanejo", "pagode", "samba", "funk brasileiro", "axé", "axe", "forró", "forro",
+      "bossa nova"), "pt"),
+    (("k-pop",), "ko"), (("j-pop", "anime", "enka", "kayokyoku", "j-rock"), "ja"),
+    (("c-pop", "mandopop", "cantopop", "chinese", "taiwanese"), "zh"),
+    (("french pop", "chanson", "variété française", "french"), "fr"), (("german pop", "schlager", "german"), "de"),
+    (("turkish", "arabesque"), "tr"), (("arabic", "khaleeji"), "ar"), (("russian",), "ru"), (("italian",), "it"),
+    (("worldwide",), "xx"),
+]
 
 # Third signal, per ARTIST: common words in all of the artist's song + album titles. It catches e.g.
 # Brazilian funk or Spanish songs whose only tag is "funk"/"pop". Spot check (Nov 23): right for about
@@ -104,6 +121,93 @@ def track_langs(genres, title: str = "", artist_lang: str | None = None) -> tupl
     if not out and artist_lang:
         out.add(artist_lang)
     return tuple(sorted(out)) or ("en",)
+
+
+def _norm_name(s: str) -> str:
+    return re.sub(r"[^0-9a-zà-ÿ]+", "", (s or "").lower())
+
+
+def itunes_lang(results) -> str | None:
+    """Language from cached iTunes artist results [[artistName, primaryGenreName], ...] (first exact-name hit)."""
+    for genre in results:
+        g = (genre or "").lower()
+        for prefixes, code in ITUNES_GENRE_LANG:
+            if g.startswith(prefixes):
+                return code
+        return None
+    return None
+
+
+def estimate_langs(df: pd.DataFrame, itunes: dict | None = None) -> list[tuple[str, ...]]:
+    """Estimated languages per track. First signal that gives an answer wins:
+    1-2. the track's own genre tags and title alphabet (track_langs)
+    3. the artist's other tracks: a tag language on >= 25% of them
+    4. credits: >= 25% (and 2+) of the songs that credit the artist are Indian-language -> hi
+    5. iTunes artist genre (lang_data/itunes_artist_genres.json), e.g. "Punjabi Pop" -> hi, "Worldwide" -> xx
+    6. common words in the artist's titles (artist_title_langs)
+    Needs columns genres, track_name, primary_artist; uses artists / album_name when present."""
+    n = len(df)
+    genres, titles, prim = list(df["genres"]), list(df["track_name"].fillna("")), list(df["primary_artist"])
+    credits = [[x.strip() for x in str(a).split(", ") if x.strip()] for a in
+               (df["artists"] if "artists" in df else df["primary_artist"])]
+    own = [track_langs(g, t) for g, t in zip(genres, titles)]
+    known = [o != ("en",) for o in own]
+
+    # 3. artist-level tag language
+    from collections import Counter, defaultdict
+    cnt, tot = defaultdict(Counter), Counter()
+    for a, o, k in zip(prim, own, known):
+        tot[a] += 1
+        if k:
+            cnt[a].update(o)
+    artist_tag = {a: c.most_common(1)[0][0] for a, c in cnt.items() if c.most_common(1)[0][1] >= 0.25 * tot[a]}
+
+    # 4. collaborators of Indian-language artists
+    # Artists for whom >= 25% of the songs crediting them (2+ songs) are Indian-language. (A looser
+    # "has 2+ Indian collaborators" rule was tried and dropped: it marked Akon and Sean Paul as Indian.)
+    collab_hi: set = set()
+    cred_n, cred_hi = Counter(), Counter()
+    for cr, o in zip(credits, own):
+        for a in cr:
+            cred_n[a] += 1
+            cred_hi[a] += "hi" in o
+    collab_hi |= {a for a in cred_n if cred_hi[a] >= 2 and cred_hi[a] >= 0.25 * cred_n[a]}
+
+    # 5. iTunes
+    it = {}
+    for a, res in (itunes or {}).items():
+        hits = [g for name, g in res if _norm_name(name) == _norm_name(a)]
+        code = itunes_lang(hits)
+        if code:
+            it[a] = code
+
+    # 6. title words
+    albums = list(df["album_name"].fillna("")) if "album_name" in df else [""] * n
+    words = artist_title_langs(prim, titles, albums)
+
+    out = []
+    for a, o, k in zip(prim, own, known):
+        if k:
+            out.append(o)
+        elif a in artist_tag:
+            out.append((artist_tag[a],))
+        elif a in collab_hi:
+            out.append(("hi",))
+        elif a in it:
+            out.append((it[a],))
+        elif a in words:
+            out.append((words[a],))
+        else:
+            out.append(("en",))
+    return out
+
+
+def load_itunes_cache(path=None) -> dict:
+    """lang_data/itunes_artist_genres.json next to this file ({} if it isn't there)."""
+    import json
+    from pathlib import Path
+    p = Path(path) if path else Path(__file__).with_name("lang_data") / "itunes_artist_genres.json"
+    return json.loads(p.read_text()) if p.exists() else {}
 
 
 def unit(v):
@@ -205,9 +309,8 @@ class SwipeRecommender(BaseEstimator):
             self.seed_hides_ = np.array([bool(t & hide) for t in tags])        # liking this unlocks them
         self.lang_mask_ = None
         if self.lang_filter:
-            albums = meta["album_name"] if "album_name" in meta else [""] * len(meta)
-            al = artist_title_langs(meta["primary_artist"], meta["track_name"], albums)
-            langs = [track_langs(g, n, al.get(a)) for g, n, a in zip(meta["genres"], meta["track_name"], meta["primary_artist"])]
+            # train_pipeline.py passes a precomputed "langs" column (with the iTunes cache); else estimate here
+            langs = list(meta["langs"]) if "langs" in meta else estimate_langs(meta)
             self.lang_mask_ = {c: np.array([c in t for t in langs]) for c in LANGS}
         self.pos_ = {t: i for i, t in enumerate(self.meta_.track_id)}
         return self
@@ -225,6 +328,7 @@ class SwipeRecommender(BaseEstimator):
         if not len(like):
             raise ValueError("need at least one liked track")
         s = taste_scores(self.E_, like, dislike, self.tau, self.lam)
+        sim = np.clip(s, 0.0, 1.0)            # what the API reports as "score": similarity only (0-1)
         if getattr(self, "pop_w", 0.0) and getattr(self, "pop_", None) is not None:   # old bundles lack these
             s = s + self.pop_w * self.pop_
         hidden = getattr(self, "hidden_", None)
@@ -257,6 +361,6 @@ class SwipeRecommender(BaseEstimator):
         picks = np.array(picks)
         because = like[(En[picks] @ En[like].T).argmax(1)]
         out = self.meta_.iloc[picks].copy()
-        out["score"] = s[picks].round(4)
+        out["score"] = sim[picks].round(4)
         out["because_you_liked"] = self.meta_.track_id.to_numpy()[because]
         return out.reset_index(drop=True)

@@ -26,7 +26,8 @@ async function lookupITunes(r) {
     withPrev.find((x) => norm(x.artistName).includes(na) && norm(x.trackName).includes(nn)) ||
     withPrev.find((x) => norm(x.artistName).includes(na) && nn.startsWith(norm(cleanName(x.trackName))));
   if (!hit) return null;
-  return { preview: hit.previewUrl, art: hit.artworkUrl100?.replace("100x100bb", "600x600bb") || null };
+  return { preview: hit.previewUrl, art: hit.artworkUrl100?.replace("100x100bb", "600x600bb") || null,
+           apple: hit.trackViewUrl || null };   // v2: the song's Apple Music page
 }
 
 async function lookupDeezer(r) {
@@ -62,6 +63,9 @@ export function getPreview(t) {
   previewCache.set(t, p);
   return p;
 }
+
+/** v2: Apple Music page of a song (from the same iTunes lookup as the preview), or null. */
+export async function getAppleUrl(t) { try { return (await getPreview(t))?.apple || null; } catch { return null; } }
 
 /** Cover art for a tile: whatever is already known, else Spotify oEmbed. */
 export function getArt(t) { return artCache.get(t) || lookupSpotifyArt(t); }

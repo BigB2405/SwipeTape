@@ -59,6 +59,7 @@ def tagged_catalog():
     """genre0 = 'kids' songs; genre1 songs get a Spanish tag; the rest are plain."""
     cat = make_catalog()
     tag = {"genre0": ["kids"], "genre1": ["latin"], "genre2": ["pop"], "genre3": ["rock"]}
+    cat["primary_artist"] = [f"{g[0]} artist {i // 3}" for i, g in enumerate(cat.genres)]   # one genre per artist
     cat["genres"] = [tag[g[0]] for g in cat.genres]
     return cat
 
@@ -125,5 +126,37 @@ def test_http_languages_field(monkeypatch, tmp_path):
     assert ok.status_code == 200
     es = set(cat.track_id[cat.genres.map(lambda g: g == ["latin"])])
     assert {r["track_id"] for r in ok.json()["recommendations"]} <= es
-    assert c.post("/recommend", json={"liked_ids": [seed], "languages": ["xx"]}).status_code == 422
+    assert c.post("/recommend", json={"liked_ids": [seed], "languages": ["zz"]}).status_code == 422
     assert c.post("/recommend", json={"liked_ids": [seed]}).status_code == 200
+
+
+def test_estimate_langs_signals():
+    import pandas as pd
+    from pipeline_def import estimate_langs
+    df = pd.DataFrame({
+        "track_name": ["Song A", "Song B", "Film Song", "Hit 1", "Hit 2", "Hit 3", "Track", "Pop Song"],
+        "primary_artist": ["Latin Guy", "Latin Guy", "Composer", "Punjabi Star", "World Act", "English Band",
+                           "Feat Artist", "English Band"],
+        "artists": ["Latin Guy", "Latin Guy", "Composer, Feat Artist", "Punjabi Star", "World Act", "English Band",
+                    "Feat Artist", "English Band"],
+        "genres": [["latin"], ["hip-hop"], ["pop-film"], ["hip-hop"], ["pop"], ["rock"], ["hip-hop"], ["pop"]],
+    })
+    itunes = {"Punjabi Star": [["Punjabi Star", "Punjabi Pop"]], "World Act": [["World Act", "Worldwide"]],
+              "English Band": [["English Band", "Rock"]]}
+    L = estimate_langs(df, itunes)
+    assert L[0] == ("es",) and L[1] == ("es",)      # artist-level: Latin Guy's untagged song inherits es
+    assert L[2] == ("hi",)                           # pop-film -> hi
+    assert L[3] == ("hi",)                           # iTunes "Punjabi Pop"
+    assert L[4] == ("xx",)                           # iTunes "Worldwide": not English
+    assert L[5] == ("en",) and L[7] == ("en",)       # iTunes "Rock" gives no language -> en
+    assert L[6] == ("en",)                           # 1 Indian credit of 2 songs is not enough (needs 2+)
+
+
+def test_score_is_similarity_between_0_and_1():
+    cat = tagged_catalog()
+    cat["popularity"] = 100
+    rec = fit_rec(cat, pop_w=0.5, lang_filter=True)
+    seed = cat.track_id.iat[0]
+    for langs in (None, ["es"], ["ko"]):
+        out = rec.recommend([seed], k=20, languages=langs)
+        assert out.score.between(0, 1).all()
