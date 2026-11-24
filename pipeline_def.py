@@ -10,9 +10,13 @@ Pipeline([("embed", SongEmbedder(...)), ("rec", SwipeRecommender(...))])
   Learned state: the StandardScaler and (if alpha > 0) a random forest that predicts a
   track's genre mix from audio. The genre labels are used only to *fit* the forest; at
   transform time only the 9 audio features are read.
+  v2 option genre_source="labels": the genre half is built from the track's real genre tags
+  (unit(sqrt(multi-hot))) instead of the forest's guess from audio. The API only serves catalog
+  songs, which all carry tags. No forest is fit in that mode.
 * SwipeRecommender stores the catalog embeddings and ranks every catalog song by how close it
   is to the songs the listener liked (a soft maximum over liked songs, so two different tastes
-  are both served instead of being averaged away), minus lam x closeness to disliked songs.
+  are both served instead of being averaged away), minus lam x closeness to disliked songs,
+  plus (v2) pop_w x popularity/100. Defaults (genre_source="forest", pop_w=0) reproduce M5 exactly.
 """
 from __future__ import annotations
 
@@ -48,16 +52,22 @@ class SongEmbedder(BaseEstimator, TransformerMixin):
     """Audio features -> song embedding (see module docstring)."""
 
     def __init__(self, alpha: float = 1.0, min_leaf: int = 20, n_estimators: int = 100,
-                 weights=tuple(APP_W), random_state: int = SEED):
+                 weights=tuple(APP_W), random_state: int = SEED, genre_source: str = "forest"):
         self.alpha, self.min_leaf, self.n_estimators = alpha, min_leaf, n_estimators
         self.weights, self.random_state = weights, random_state
+        self.genre_source = genre_source
 
     def fit(self, X: pd.DataFrame, y=None, forest: RandomForestClassifier | None = None):
         """X needs FEATS columns, plus a `genres` (list) column when alpha > 0.
         `forest` lets the caller pass a forest already fit on the same X (used to share work in tuning)."""
+        if self.genre_source not in ("forest", "labels"):
+            raise ValueError(f"genre_source must be 'forest' or 'labels', got {self.genre_source!r}")
         self.scaler_ = StandardScaler().fit(X[FEATS].to_numpy(float))
         self.forest_ = None
-        if self.alpha:
+        self.genres_ = None
+        if self.alpha and self.genre_source == "labels":
+            self.genres_ = sorted({g for gs in X["genres"] for g in gs})
+        elif self.alpha:
             self.forest_ = forest if forest is not None else fit_genre_forest(
                 self.scaler_.transform(X[FEATS].to_numpy(float)), X["genres"], self.min_leaf,
                 self.n_estimators, self.random_state)
@@ -67,7 +77,15 @@ class SongEmbedder(BaseEstimator, TransformerMixin):
     def transform(self, X: pd.DataFrame) -> np.ndarray:
         Zs = self.scaler_.transform(X[FEATS].to_numpy(float))
         parts = [unit(Zs * np.asarray(self.weights))]
-        if self.forest_ is not None:
+        if getattr(self, "genres_", None) is not None:
+            col = {g: j for j, g in enumerate(self.genres_)}
+            L = np.zeros((len(X), len(col)))
+            for i, gs in enumerate(X["genres"]):
+                for g in gs:
+                    if g in col:
+                        L[i, col[g]] = 1.0
+            parts.append(self.alpha * unit(np.sqrt(L)))
+        elif self.forest_ is not None:
             parts.append(self.alpha * unit(np.sqrt(self.forest_.predict_proba(Zs))))
         return np.hstack(parts)
 
@@ -91,14 +109,19 @@ def taste_scores(E: np.ndarray, like: np.ndarray, dislike: np.ndarray | None = N
 class SwipeRecommender(BaseEstimator):
     """Holds catalog embeddings + metadata; `recommend` turns swipes into a playlist."""
 
-    def __init__(self, tau: float = 0.1, lam: float = 0.0, k: int = 10, artist_cap: int = 2):
+    def __init__(self, tau: float = 0.1, lam: float = 0.0, k: int = 10, artist_cap: int = 2, pop_w: float = 0.0):
         self.tau, self.lam, self.k, self.artist_cap = tau, lam, k, artist_cap
+        self.pop_w = pop_w
 
     def fit(self, E: np.ndarray, y=None, meta: pd.DataFrame | None = None):
         """meta: one row per catalog track, same order as E, with track_id / track_name / primary_artist."""
         assert meta is not None and len(meta) == len(E), "pass rec__meta=<catalog dataframe>"
         self.E_ = np.asarray(E, np.float32)  # float32 keeps the saved artifact under the 100 MB budget
         self.meta_ = meta[["track_id", "track_name", "primary_artist"]].reset_index(drop=True)
+        self.pop_ = None
+        if self.pop_w:
+            assert "popularity" in meta, "pop_w > 0 needs a popularity column in meta"
+            self.pop_ = meta["popularity"].to_numpy(np.float32) / 100
         self.pos_ = {t: i for i, t in enumerate(self.meta_.track_id)}
         return self
 
@@ -112,6 +135,8 @@ class SwipeRecommender(BaseEstimator):
         if not len(like):
             raise ValueError("need at least one liked track")
         s = taste_scores(self.E_, like, dislike, self.tau, self.lam)
+        if getattr(self, "pop_w", 0.0) and getattr(self, "pop_", None) is not None:   # old bundles lack these
+            s = s + self.pop_w * self.pop_
         swiped = np.concatenate([like, dislike])
         s[swiped] = -np.inf
         names = self.meta_.track_name.str.lower().str.strip().to_numpy()

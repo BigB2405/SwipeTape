@@ -7,3 +7,4 @@ __pycache__/
 .streamlit/secrets.toml
 artifacts/
 pipeline.joblib
+pipeline_v2.joblib

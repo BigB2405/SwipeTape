@@ -20,7 +20,7 @@ def test_custom_transformer_has_learned_state(bundle_path):
 def test_fit_returns_self_and_init_only_assigns():
     from pipeline_def import SongEmbedder
     t = SongEmbedder(alpha=0)
-    assert vars(t).keys() == {"alpha", "min_leaf", "n_estimators", "weights", "random_state"}
+    assert vars(t).keys() == {"alpha", "min_leaf", "n_estimators", "weights", "random_state", "genre_source"}
     from conftest import make_catalog
     assert t.fit(make_catalog()) is t
 
