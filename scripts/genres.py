@@ -14,3 +14,13 @@ FAMILIES = {
     "Other": "children kids comedy disco".split(),
 }
 FAMILY_OF = {g: f for f, gs in FAMILIES.items() for g in gs}
+
+
+# v2 app groups (songs.json only). FAMILIES / FAMILY_OF above stay as they are: the D3 and D6
+# evaluation and tracks_clean.parquet's genre_family were built with them.
+APP_FAMILIES = {f: [g for g in gs if g not in {"pop-film", "show-tunes", "disney", "sleep", "children", "kids"}]
+                for f, gs in FAMILIES.items()}
+APP_FAMILIES["Soundtracks & Musicals"] = ["show-tunes", "disney", "pop-film"]
+APP_FAMILIES["Kids & Sleep"] = ["children", "kids", "sleep"]
+APP_FAMILY_OF = {g: f for f, gs in APP_FAMILIES.items() for g in gs}
+assert set(APP_FAMILY_OF) == set(FAMILY_OF)

@@ -27,7 +27,8 @@ from pipeline_def import FEATS, SongEmbedder, SwipeRecommender  # noqa: E402  (p
 
 OUT = Path("pipeline.joblib")   # repo root, next to serve.py (gitignored; rebuild with this script)
 OUT_V2 = Path("pipeline_v2.joblib")
-V2 = dict(genre_source="labels", alpha=0.5, tau=0.3, lam=0.0, pop_w=0.05)   # chosen Nov 23 from reports/v2_compare.csv
+V2 = dict(genre_source="labels", alpha=0.5, tau=0.3, lam=0.0, pop_w=0.05,   # chosen Nov 23 from reports/v2_compare.csv
+          hide_unless_seeded=["children", "kids", "sleep"], lang_filter=True)
 V2_NAME = "M6 tags alpha=0.5 pop=0.05"
 
 
@@ -53,7 +54,9 @@ def main():
     if v2:
         p = dict(V2)
         pipe = Pipeline([("embed", SongEmbedder(alpha=p["alpha"], genre_source="labels")),
-                         ("rec", SwipeRecommender(tau=p["tau"], lam=p["lam"], pop_w=p["pop_w"]))])
+                         ("rec", SwipeRecommender(tau=p["tau"], lam=p["lam"], pop_w=p["pop_w"],
+                                                  hide_unless_seeded=tuple(p["hide_unless_seeded"]),
+                                                  lang_filter=p["lang_filter"]))])
     else:
         pipe = Pipeline([("embed", SongEmbedder(alpha=p["alpha"], min_leaf=p["min_leaf"])),
                          ("rec", SwipeRecommender(tau=p["tau"], lam=p["lam"]))])

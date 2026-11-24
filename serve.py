@@ -17,7 +17,7 @@ and any extra origins listed in the ALLOWED_ORIGINS environment variable (comma 
 """
 import os
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import joblib
 import sklearn
@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 import pipeline_def  # noqa: F401  (the pickled pipeline refers to its classes by module name)
+from pipeline_def import LANGS
 
 PIPELINE_PATH = Path(os.environ.get("PIPELINE_PATH", Path(__file__).with_name("pipeline.joblib")))
 
@@ -49,7 +50,7 @@ try:                                           # loaded once per server process
 except Exception as e:                         # noqa: BLE001  any failure -> 503, never a 500
     BUNDLE, LOAD_ERROR = None, f"{type(e).__name__}: {e}"
 
-app = FastAPI(title="SwipeTape recommender API", version="0.5.0",
+app = FastAPI(title="SwipeTape recommender API", version="0.6.0",
               description="Song-to-song recommender selected in D3 (hybrid audio + genre-mix embedding).")
 app.add_middleware(
     CORSMiddleware,
@@ -77,6 +78,10 @@ class RecommendRequest(BaseModel):
     liked_ids: list[TrackId] = Field(min_length=1, max_length=25, description="Tracks swiped right (at least 1).")
     disliked_ids: list[TrackId] = Field(default_factory=list, max_length=25, description="Tracks swiped left.")
     k: int = Field(default=10, ge=1, le=50, description="How many recommendations to return.")
+    languages: list[Literal[tuple(LANGS)]] | None = Field(
+        default=None, max_length=len(LANGS),
+        description="v2: estimated languages to prefer (codes: " + ", ".join(LANGS) + "; en = English or other). "
+                    "Omit for any language. Other languages fill in only if too few songs match.")
 
     @model_validator(mode="after")
     def _consistent(self):
@@ -102,13 +107,13 @@ class RecommendResponse(BaseModel):
     k: int
 
 
-def recommend_items(bundle: dict, liked: list[str], disliked: list[str], k: int) -> list[dict]:
+def recommend_items(bundle: dict, liked: list[str], disliked: list[str], k: int, languages=None) -> list[dict]:
     """Run swipes through the fitted pipeline's recommender step. ValueError on unknown track ids."""
     rec = bundle["pipeline"].named_steps["rec"]
     unknown = rec.unknown(liked + disliked)
     if unknown:
         raise ValueError(f"unknown track ids: {unknown}")
-    out = rec.recommend(liked, disliked, k)
+    out = rec.recommend(liked, disliked, k, languages=languages) if languages else rec.recommend(liked, disliked, k)
     return [{"track_id": r.track_id, "track_name": r.track_name, "artist": r.primary_artist,
              "score": float(r.score), "because_you_liked": r.because_you_liked} for r in out.itertuples()]
 
@@ -170,7 +175,7 @@ def search(q: Annotated[str, Query(min_length=2, max_length=100, description="So
 def recommend(body: RecommendRequest):
     bundle = _bundle()
     try:
-        items = recommend_items(bundle, body.liked_ids, body.disliked_ids, body.k)
+        items = recommend_items(bundle, body.liked_ids, body.disliked_ids, body.k, body.languages)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return {"recommendations": items, "model": bundle["metadata"]["model"], "k": body.k}
