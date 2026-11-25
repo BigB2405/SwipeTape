@@ -6,6 +6,18 @@ SwipeTape is a music discovery web app built around a Tinder-style swipe. Users 
 
 **Research question:** Can shared musical features among songs a user likes or dislikes improve the quality of the personalized playlist produced by a swipe-based recommender?
 
+## Live app
+
+| | Link |
+|---|---|
+| **SwipeTape website** (public, no login) | https://swipetape-group10.vercel.app |
+| Vercel project settings | https://vercel.com/uncc3/swipetape/settings |
+| Vercel GitHub connection / production branch | https://vercel.com/uncc3/swipetape/settings/git |
+| Vercel domains | https://vercel.com/uncc3/swipetape/settings/domains |
+| Vercel deployments (build history) | https://vercel.com/uncc3/swipetape/deployments |
+
+The website is open to anyone. The Vercel dashboard links only open for accounts on the `uncc3` Vercel team. The site deploys from the `main` branch (D5 app, tag `d5-final`).
+
 ---
 
 ## D6 submission: final report and test results
@@ -34,7 +46,7 @@ uv run --frozen python scripts/plot_d6.py
 |---|---|
 | Website (Vercel) | https://swipetape-group10.vercel.app |
 | Modal API / docs | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
-| Branch / tag | branch `D5` · tag `d5-final` (after review) |
+| Branch / tag | branch `D5` · tag `d5-final` |
 | D5 note (tabs, API calls, loading/error states, tests) | [`docs/D5_app.md`](docs/D5_app.md) · screenshots in [`docs/d5_screenshots/`](docs/d5_screenshots/) |
 | Frontend code | [`public/`](public/) (`index.html`, `style.css`, `js/*.js`, `config.js`) |
 | Accounts schema | [`sql/accounts.sql`](sql/accounts.sql) (Supabase Auth + row level security) |
@@ -280,14 +292,14 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 | D2 Data preparation and EDA | Nov 2 | ✅ tag `d2-final` |
 | D3 Model evaluation | Nov 16 | ✅ tag `d3-final` |
 | D4 Fitted scikit-learn pipeline + FastAPI on Modal | Nov 23 | ✅ tag `d4-final` |
-| D5 Vercel frontend calling the live API + Postman tests | Nov 30 | in progress, branch `D5` |
+| D5 Vercel frontend calling the live API + Postman tests | Nov 30 | done, branch `D5` · tag `d5-final` |
 | D6 Final report and demo (frozen model on reserved test data) | Dec 2 | ✅ report on branch `D6`; presentation Dec 2 |
 
 ## Contributions and AI use
 
 - **D2:** Devanshi Parmar: data preparation, plotting, data dictionary, dashboard code, first draft of the data note. Britain Russell: Supabase setup and data load, Modal deployment, dashboard chart fix, finalizing the data note.
 - **D3:** Britain Russell: evaluation design, model and evaluation code, experiments, first versions of the modeling note. Devanshi Parmar: code review, reproducing the results, revising the modeling note.
-- **D5:** _[to confirm with group]_ Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, tests and Postman. Claude Code drafted the code.
+- **D5:** Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, tests and Postman. Claude Code drafted the code.
 - **D4:** Aarav Shroff (GitHub `ashroff23`): pipeline refactor (`pipeline_def.py`), FastAPI service, Modal files, tests, Postman collection, and D4 note. Britain Russell: building and verifying the artifact, Modal deployment and fix, local-vs-deployed check.
 
 **AI assistance:** Claude Code helped draft the preparation, plotting, dashboard, model, and evaluation code, the notes, and this README, and helped review and reproduce the D3 results, and drafted the D4 API, deployment, tests, and checks. The group reviewed and ran all of it.
