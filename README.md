@@ -2,9 +2,21 @@
 
 SwipeTape is a music discovery web app built around a Tinder-style swipe. Users listen to 30-second song previews and swipe left or right (or up to "love" a track), and the app builds a personalized playlist from their taste. Our goal is to help listeners get past trending hits and discover smaller artists they would otherwise miss.
 
-**DTSC 3602 · Fall 2026 · Group 10:** Devanshi Parmar, Britain Russell
+**DTSC 3602 · Fall 2026 · Group 10:** Devanshi Parmar, Britain Russell, Aarav Shroff
 
 **Research question:** Can shared musical features among songs a user likes or dislikes improve the quality of the personalized playlist produced by a swipe-based recommender?
+
+## Live app
+
+| | Link |
+|---|---|
+| **SwipeTape website** (public, no login) | https://swipetape-group10.vercel.app |
+| Vercel project settings | https://vercel.com/uncc3/swipetape/settings |
+| Vercel GitHub connection / production branch | https://vercel.com/uncc3/swipetape/settings/git |
+| Vercel domains | https://vercel.com/uncc3/swipetape/settings/domains |
+| Vercel deployments (build history) | https://vercel.com/uncc3/swipetape/deployments |
+
+The website is open to anyone. The Vercel dashboard links only open for accounts on the `uncc3` Vercel team. The site deploys from the `main` branch (D5 app, tag `d5-final`).
 
 ---
 
@@ -268,6 +280,6 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 - **D2:** Devanshi Parmar: data preparation, plotting, data dictionary, dashboard code, first draft of the data note. Britain Russell: Supabase setup and data load, Modal deployment, dashboard chart fix, finalizing the data note.
 - **D3:** Britain Russell: evaluation design, model and evaluation code, experiments, first versions of the modeling note. Devanshi Parmar: code review, reproducing the results, revising the modeling note.
 - **D5:** Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, tests and Postman. Claude Code drafted the code.
-- **D4:** GitHub user `ashroff23`: pipeline refactor (`pipeline_def.py`), FastAPI service, Modal files, tests, Postman collection, and D4 note. Britain Russell: building and verifying the artifact, Modal deployment and fix, local-vs-deployed check.
+- **D4:** Aarav Shroff (GitHub `ashroff23`): pipeline refactor (`pipeline_def.py`), FastAPI service, Modal files, tests, Postman collection, and D4 note. Britain Russell: building and verifying the artifact, Modal deployment and fix, local-vs-deployed check.
 
 **AI assistance:** Claude Code helped draft the preparation, plotting, dashboard, model, and evaluation code, the notes, and this README, and helped review and reproduce the D3 results, and drafted the D4 API, deployment, tests, and checks. The group reviewed and ran all of it.

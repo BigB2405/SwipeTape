@@ -76,4 +76,4 @@ The same script passes against the local server (`http://127.0.0.1:8000`), and t
 - `SongEmbedder.__init__` only stores its arguments and `fit` returns `self`, as the sklearn API (and HW4) require.
 - The artifact is a pickle: load only files you built yourself, with the matching scikit-learn version.
 - `GET /sample` and the id format check assume ids come from the catalog (`/sample`); ids outside it get a 422.
-- AI assistance: Claude helped draft `serve.py`, `modal_serve.py`, the tests, the check script and this note. _Contributions: see the README (D4 line to confirm with group)._
+- AI assistance: Claude helped draft `serve.py`, `modal_serve.py`, the tests, the check script and this note. _Contributions: Aarav Shroff (pipeline refactor, FastAPI service, Modal files, tests, Postman collection, this note); Britain Russell (artifact build and verification, Modal deployment fix, local-vs-deployed check). See the README._
