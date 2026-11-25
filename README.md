@@ -260,14 +260,14 @@ pipe.named_steps["rec"].recommend(liked_ids=["<track_id>", ...], disliked_ids=[.
 | D2 Data preparation and EDA | Nov 2 | ✅ tag `d2-final` |
 | D3 Model evaluation | Nov 16 | ✅ tag `d3-final` |
 | D4 Fitted scikit-learn pipeline + FastAPI on Modal | Nov 23 | ✅ tag `d4-final` |
-| D5 Vercel frontend calling the live API + Postman tests | Nov 30 | in progress, branch `D5` |
+| D5 Vercel frontend calling the live API + Postman tests | Nov 30 | done, branch `D5` · tag `d5-final` |
 | D6 Final report and demo (frozen model on reserved test data) | Dec 2 | planned |
 
 ## Contributions and AI use
 
 - **D2:** Devanshi Parmar: data preparation, plotting, data dictionary, dashboard code, first draft of the data note. Britain Russell: Supabase setup and data load, Modal deployment, dashboard chart fix, finalizing the data note.
 - **D3:** Britain Russell: evaluation design, model and evaluation code, experiments, first versions of the modeling note. Devanshi Parmar: code review, reproducing the results, revising the modeling note.
-- **D5:** _[to confirm with group]_ Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, tests and Postman. Claude Code drafted the code.
+- **D5:** Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, tests and Postman. Claude Code drafted the code.
 - **D4:** GitHub user `ashroff23`: pipeline refactor (`pipeline_def.py`), FastAPI service, Modal files, tests, Postman collection, and D4 note. Britain Russell: building and verifying the artifact, Modal deployment and fix, local-vs-deployed check.
 
 **AI assistance:** Claude Code helped draft the preparation, plotting, dashboard, model, and evaluation code, the notes, and this README, and helped review and reproduce the D3 results, and drafted the D4 API, deployment, tests, and checks. The group reviewed and ran all of it.
