@@ -26,7 +26,7 @@ The website is open to anyone. The Vercel dashboard links only open for accounts
 |---|---|
 | Website (Vercel) | https://swipetape-group10.vercel.app |
 | Modal API / docs | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
-| Branch / tag | branch `D5` · tag `d5-final` (after review) |
+| Branch / tag | branch `D5` · tag `d5-final` |
 | D5 note (tabs, API calls, loading/error states, tests) | [`docs/D5_app.md`](docs/D5_app.md) · screenshots in [`docs/d5_screenshots/`](docs/d5_screenshots/) |
 | Frontend code | [`public/`](public/) (`index.html`, `style.css`, `js/*.js`, `config.js`) |
 | Accounts schema | [`sql/accounts.sql`](sql/accounts.sql) (Supabase Auth + row level security) |
