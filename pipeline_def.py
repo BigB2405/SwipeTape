@@ -44,7 +44,8 @@ LANG_OF_GENRE = {
     **dict.fromkeys(["spanish", "latin", "latino", "reggaeton", "salsa", "tango"], "es"),
     **dict.fromkeys(["brazil", "mpb", "pagode", "samba", "sertanejo", "forro"], "pt"),
     "indian": "hi", "pop-film": "hi",      # pop-film in this dataset is Indian film music (A.R. Rahman, Thaman S, ...)
-    **dict.fromkeys(["j-pop", "j-rock", "j-idol", "j-dance", "anime"], "ja"),
+    # "j-dance" is left out: in this dataset it mostly holds dancehall and R&B (61 of 802 tracks look Japanese)
+    **dict.fromkeys(["j-pop", "j-rock", "j-idol", "anime"], "ja"),
     "k-pop": "ko",
     **dict.fromkeys(["cantopop", "mandopop"], "zh"),
     "french": "fr", "german": "de", "swedish": "sv", "turkish": "tr", "malay": "ms", "iranian": "fa",
