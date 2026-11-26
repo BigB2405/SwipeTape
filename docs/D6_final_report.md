@@ -1,13 +1,14 @@
-# SwipeTape: Final Report (DTSC 3602, Group 10)
+# SoundSwipe: Final Report (DTSC 3602, Group 10)
 
-**Team:** Devanshi Parmar, Britain Russell · **Repository:** https://github.com/BigB2405/SwipeTape (tag `d6-final`)  
-**App:** https://swipetape-group10.vercel.app · **API:** https://bigb2405--swipetape-api-web.us-east.modal.run ([/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs))  
+**Team:** Devanshi Parmar, Britain Russell, Aarav Shroff · **Repository:** https://github.com/BigB2405/SwipeTape (tag `d6-final`)  
+**App:** https://swipetape-group10.vercel.app · **API:** https://bigb2405--swipetape-api-web.us-east.modal.run ([/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs)) · **Postman:** [`postman/swipetape_api.postman_collection.json`](../postman/swipetape_api.postman_collection.json), screenshots in [`docs/d5_screenshots/`](d5_screenshots/)  
+**Name:** the website is called **SoundSwipe** (renamed from SwipeTape on Nov 25); the repository, API and URLs keep the original name.  
 **Research question:** Can shared musical features among songs a user likes or dislikes improve the quality of the personalized playlist produced by a swipe-based recommender?
 
 **Answer in one paragraph.** Yes for likes, no for dislikes. On the reserved test split, opened once for this report, the frozen model finds a listener's held-out songs in its top 50 with Recall@50 **0.145 [0.133, 0.158]**. That is about **26×** the popularity baseline (0.006) and **1.66×** the app's original method (0.088), and both gaps are significant (p < 10⁻³⁴). Adding what a listener *dislikes* changed nothing for the original method and slightly hurt the selected model's family, as it did in validation. The test result matches validation (0.139), so the D3 choice holds on unseen artists.
 
 ## 1. Problem and domain rationale
-Streaming listeners tend to hear the same trending songs, and small artists rarely reach them. The decision SwipeTape supports is **which songs to queue next for a listener after a few swipes**. It affects listeners, who want to discover music faster, and smaller artists, who need exposure. A recommender that leans on popularity makes the "rich get richer" loop worse, so the project's success criterion is finding songs that *sound like what you liked*, not songs that are popular.
+Streaming listeners tend to hear the same trending songs, and small artists rarely reach them. The decision SoundSwipe supports is **which songs to queue next for a listener after a few swipes**. It affects listeners, who want to discover music faster, and smaller artists, who need exposure. A recommender that leans on popularity makes the "rich get richer" loop worse, so the project's success criterion is finding songs that *sound like what you liked*, not songs that are popular.
 
 We chose music because the Spotify audio features (danceability, energy, acousticness and so on) let us test a clear idea: is "sounds similar" enough to personalize a playlist without any listening history? It also turns HW1–HW4 into a product people can use. The app shows 30-second previews in a Tinder-style deck. Swipe right to like, left to dislike, up to love, and the model builds a playlist.
 
@@ -122,9 +123,9 @@ The README links the data source, the Supabase and Modal setup, Postman (23/23 a
 **Contributions:**
 - **D2:** Devanshi Parmar: data preparation, plots, data dictionary, dashboard code. Britain Russell: Supabase load, Modal deployment, final data note.
 - **D3:** Britain Russell: evaluation design and model code. Devanshi Parmar: review, reproduction, note revision.
-- **D4:** GitHub user `ashroff23`: pipeline refactor, FastAPI service, tests, Postman. Britain Russell: artifact, Modal fix, local-vs-deployed check.
+- **D4:** Aarav Shroff (GitHub `ashroff23`): pipeline refactor, FastAPI service, tests, Postman. Britain Russell: artifact, Modal fix, local-vs-deployed check.
 - **D5:** Britain Russell: app redesign, search endpoint, accounts.
-- **D6:** Britain Russell: final test script, figures, report draft and slides. _[group to confirm the remaining D6 roles]_
+- **D6:** Britain Russell: final test script, figures, report and slides.
 
 **AI assistance:** Claude Code helped draft code across D2–D6 (preparation, evaluation, pipeline, API, frontend, and the final-test and plotting scripts), the notes and this report. The group reviewed and ran all of it and checked every number against `reports/d6_summary.json`.
 
