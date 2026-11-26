@@ -4,12 +4,27 @@
 
 | Item | Link |
 |---|---|
-| Website (Vercel) | https://swipetape-group10.vercel.app |
-| Live API (Modal) | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
+| Website (Vercel) | https://swipetape-group10.vercel.app (runs **SoundSwipe v2** since Nov 25, see below) |
+| Live API the website calls (Modal) | https://bigb2405--swipetape-api-v2-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-v2-web.us-east.modal.run/docs) |
+| D4 API (still live, unchanged) | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
 | Frontend code | [`public/`](../public/): `index.html`, `style.css`, `config.js`, `js/*.js` |
-| Postman collection | [`postman/swipetape_api.postman_collection.json`](../postman/swipetape_api.postman_collection.json) (10 requests, 29 assertion lines) |
-| Screenshots | [`docs/d5_screenshots/`](d5_screenshots/): app `1_`–`5_` (retaken Nov 25 with the SoundSwipe name), Postman `6_`–`8_`, API-unreachable error state `9_`, phone layout `10_` |
-| Tag | `d5-final` |
+| Postman collections | v2 API: [`postman/soundswipe_v2_api.postman_collection.json`](../postman/soundswipe_v2_api.postman_collection.json) (12 requests, 27 assertions) · D4/D5 API: [`postman/swipetape_api.postman_collection.json`](../postman/swipetape_api.postman_collection.json) (10 requests, 23 assertions) |
+| Screenshots | [`docs/d5_screenshots/`](d5_screenshots/): v2 app and Postman `v2_*`; D5 version `1_`–`10_` |
+| Branch / tag | `main` (v2) · branch `D5` and tag `d5-final` (the version before v2) |
+
+## Update, Nov 25: the live site runs SoundSwipe v2
+
+After the D5 build we renamed the site to **SoundSwipe** (instructor feedback on the name) and made v2 the live version. Everything below about tabs, loading and error states, accounts and tests still applies; v2 adds to it:
+
+- **Taste survey** on the first visit: languages → genre groups → tap songs you know. The picks seed Home's "Because you liked …" rows and the swipe deck. It can be skipped or redone from the Me tab.
+- **Better model (M6, chosen on validation only):** real genre tags in the song embedding and a small popularity boost. On validation, genre agreement went from 19% to 98% and kids' songs in mixes from 2.3% to 0.04%. *Gangsta's Paradise* now returns Drake and Snoop Dogg instead of a kids' song.
+- **Languages:** the API takes an optional `languages` list, and Find similar has a "My languages / Any language" switch. Languages are *estimated* (the data has no language column), and the app says so.
+- **Adaptive swipe deck:** after a like, "Because you liked …" cards from the model join the deck.
+- **Apple Music links** next to Spotify; match scores never go over 100%.
+
+The v2 API is a **separate** Modal app, so the D4 API, its URL and its outputs did not change.
+
+**v2 checks (Nov 25, deployed URL):** Postman v2 collection **27/27 assertions passed** (health, pipeline info, sample, valid recommend, three 422s, search, short search 422, Find similar k=5, `languages=["en"]` sorted and within 0–1, unknown language 422); `check_deployed.py` with the v2 bundle **ALL CHECKS PASSED**; pytest 34/34. The D4 API still passes its own collection 23/23 and `check_deployed.py`.
 
 ## What the app does
 

@@ -511,7 +511,7 @@ async function finish() {
   $("#mixSource").hidden = false;
   $("#mixSource").className = "mix-source " + source;
   $("#mixSource").innerHTML = source === "model"
-    ? "Picked by the SoundSwipe model (song kNN, live API). % = how close each song is to the songs you liked (audio features + genre)."
+    ? "Picked by the SoundSwipe model (song kNN, live API). % = match score: how close each song is to the songs you liked (audio features + genre), with a small boost for well-known songs."
     : `Offline picks: a simple in-browser formula, because the model API failed (${esc(why)}). <button class="linkbtn" id="retryMix">Try the model again</button>`;
   $("#matchSub").textContent += ` Here are ${picks.length} songs picked to match.`;
   const mins = Math.round(picks.reduce((a, p) => a + (row(p.t)[DUR] || 0), 0) / 60);

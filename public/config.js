@@ -1,14 +1,15 @@
 // Public settings for the browser. Only PUBLIC values belong here: this file is served to everyone.
-// - API_URL: the D4/D5 FastAPI service on Modal.
+// - API_URL: the SoundSwipe v2 FastAPI service on Modal (app swipetape-api-v2). The D4 API
+//   (https://bigb2405--swipetape-api-web.us-east.modal.run) is still live and unchanged, but the site no longer calls it.
 // - SUPABASE_PUBLISHABLE_KEY: the "publishable" (anon) key from Supabase > Project Settings > API Keys.
 //   It is designed to be public; row level security (sql/accounts.sql) keeps each user's data private.
 //   NEVER put the service_role / secret key here. Leave the key empty to run the app in guest mode.
 export const CONFIG = {
-  API_URL: "https://bigb2405--swipetape-api-web.us-east.modal.run",
+  API_URL: "https://bigb2405--swipetape-api-v2-web.us-east.modal.run",
   SUPABASE_URL: "https://igwdtnmodzidwxnnwhtm.supabase.co",
   GOOGLE_LOGIN: true,    // set to true once the Google provider is enabled in Supabase (Authentication > Providers)
   SUPABASE_PUBLISHABLE_KEY: "sb_publishable_PyAVpd6tUm5y_huVnwtxJg_lG3RFyVz",
-  API_V2: false,         // v2 API (serve.py 0.6.0+) accepts `languages` on /recommend; the live D4/D5 API does not
+  API_V2: true,          // v2 API (serve.py 0.6.0+) accepts `languages` on /recommend; the D4 API does not
 };
 
 // Local development: `?api=local` talks to `uv run --frozen uvicorn serve:app` on port 8000.

@@ -10,13 +10,38 @@ SwipeTape is a music discovery web app, shown to users as **SoundSwipe**, built 
 
 | | Link |
 |---|---|
-| **SwipeTape website** (public, no login) | https://swipetape-group10.vercel.app |
+| **SoundSwipe website** (public, no login; v2 since Nov 25) | https://swipetape-group10.vercel.app |
+| v2 API the website calls (Modal app `swipetape-api-v2`) | https://bigb2405--swipetape-api-v2-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-v2-web.us-east.modal.run/docs) |
+| D4 API (Modal app `swipetape-api`, unchanged since D4/D5) | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
 | Vercel project settings | https://vercel.com/uncc3/swipetape/settings |
 | Vercel GitHub connection / production branch | https://vercel.com/uncc3/swipetape/settings/git |
 | Vercel domains | https://vercel.com/uncc3/swipetape/settings/domains |
 | Vercel deployments (build history) | https://vercel.com/uncc3/swipetape/deployments |
 
-The website is open to anyone. The Vercel dashboard links only open for accounts on the `uncc3` Vercel team. The site deploys from the `main` branch (D5 app, tag `d5-final`).
+The website is open to anyone. The Vercel dashboard links only open for accounts on the `uncc3` Vercel team. The site deploys from the `main` branch.
+
+**Two APIs, on purpose.** Since Nov 25 the website runs **SoundSwipe v2** and calls the separate v2 API. The **D4 API is still live and was not redeployed**: same URL, same `pipeline.joblib` (M5), same code as tag `d4-final` for `/health`, `/pipeline/info`, `/sample` and `/recommend`. `scripts/check_deployed.py` still passes against it from `main` (checked Nov 25), and the D4 Postman collection still passes 23/23.
+
+## SoundSwipe v2 (live since Nov 25, 2026)
+
+| What changed | Why |
+|---|---|
+| **Model M6:** the genre half of the song embedding uses the songs' real genre tags (weight α = 0.5) instead of the forest's genre guess, plus a small popularity boost (0.05) | M5 matched sound but not style: *Gangsta's Paradise* returned a kids' song and 0 of 10 same-genre picks. On validation, genre agreement rose from 19% to 98% and kids' songs in mixes fell from 2.3% to 0.04%. Selected on **validation only**; the test split was **not** reopened, so the D6 test result is about M5, the frozen D4 model. See [`reports/v2_compare.md`](reports/v2_compare.md). |
+| **Genre groups:** new "Soundtracks & Musicals" group; kids and sleep songs are hidden unless you start from one | show tunes were filed under Jazz & Classical; lullabies leaked into adult mixes |
+| **Language estimate** (the data has no language column): genre tags, title alphabet, the artist's other titles, and the artist's iTunes genre ([`lang_data/`](lang_data/)) | lets listeners say which languages they want. It is an *estimate* and can be wrong; the app says so |
+| **Taste survey** on the first visit: languages → genre groups → tap songs you know | a cold start gets useful picks before any swiping |
+| **Adaptive swipe deck:** after a like, the next cards include "Because you liked …" songs from the model | the deck learns during the round |
+| **Apple Music links** next to Spotify, and match scores capped at 100% | |
+| **API 0.6.0:** optional `languages` on `/recommend` (unknown code → 422); `score` = the ranking score clipped to 0–1, so results are always sorted by it | |
+
+Checks (Nov 25): `check_deployed.py` with `PIPELINE_PATH=pipeline_v2.joblib` passes against the v2 API; [`postman/soundswipe_v2_api.postman_collection.json`](postman/soundswipe_v2_api.postman_collection.json) passes **27/27** (the D4/D5 requests + 2 for `languages`); 34 pytest tests pass.
+
+```bash
+uv run --frozen python scripts/build_data.py              # public/songs.json with language estimates
+uv run --frozen python scripts/train_pipeline.py --v2     # pipeline_v2.joblib (7 MB, gitignored)
+SWIPETAPE_V2=1 uv run --frozen modal deploy modal_serve.py   # Modal app swipetape-api-v2 (the D4 app is not touched)
+PIPELINE_PATH=pipeline_v2.joblib uv run --frozen python scripts/check_deployed.py --url https://bigb2405--swipetape-api-v2-web.us-east.modal.run
+```
 
 ---
 
@@ -28,7 +53,7 @@ The website is open to anyone. The Vercel dashboard links only open for accounts
 | Branch / tag | branch `D6` · tag `d6-final` (after review) |
 | Final test code | [`scripts/final_test.py`](scripts/final_test.py) · [`scripts/plot_d6.py`](scripts/plot_d6.py) |
 | Results | [`reports/d6_summary.json`](reports/d6_summary.json) · [`reports/d6_results.csv`](reports/d6_results.csv) · [`reports/d6_spot_checks.md`](reports/d6_spot_checks.md) · figures `reports/figures/d6_*.png` |
-| Website / API / docs | https://swipetape-group10.vercel.app · https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
+| Website / API / docs | https://swipetape-group10.vercel.app (v2) · D4 API (the frozen, test-evaluated model) https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) · v2 API https://bigb2405--swipetape-api-v2-web.us-east.modal.run |
 | Postman | [`postman/`](postman/swipetape_api.postman_collection.json) · screenshots in [`docs/d5_screenshots/`](docs/d5_screenshots/) |
 
 - **Final test (reserved split, opened once on Nov 22, 2026; frozen `pipeline.joblib`, no refit):** 766 simulated listeners, 11,630 unseen-artist songs. M5 Recall@50 **0.145 [0.133, 0.158]** (validation 0.139) vs. popularity **0.006** (~26×) and the app's original method **0.088** (all p < 10⁻³⁴).
@@ -44,13 +69,13 @@ uv run --frozen python scripts/plot_d6.py
 
 | Item | Link |
 |---|---|
-| Website (Vercel) | https://swipetape-group10.vercel.app |
-| Modal API / docs | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
-| Branch / tag | branch `D5` · tag `d5-final` |
+| Website (Vercel) | https://swipetape-group10.vercel.app (SoundSwipe v2 since Nov 25; the D5 version is branch `D5`) |
+| Modal API / docs | v2 (what the site calls): https://bigb2405--swipetape-api-v2-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-v2-web.us-east.modal.run/docs) · D4/D5: https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
+| Branch / tag | branch `D5` · tag `d5-final` · v2 on `main` |
 | D5 note (tabs, API calls, loading/error states, tests) | [`docs/D5_app.md`](docs/D5_app.md) · screenshots in [`docs/d5_screenshots/`](docs/d5_screenshots/) |
 | Frontend code | [`public/`](public/) (`index.html`, `style.css`, `js/*.js`, `config.js`) |
 | Accounts schema | [`sql/accounts.sql`](sql/accounts.sql) (Supabase Auth + row level security) |
-| API tests | [`postman/`](postman/swipetape_api.postman_collection.json) (10 requests with assertions) · [`scripts/check_deployed.py`](scripts/check_deployed.py) · [`tests/`](tests/) |
+| API tests | [`postman/swipetape_api.postman_collection.json`](postman/swipetape_api.postman_collection.json) (D4/D5 API, 10 requests, 23 assertions) · [`postman/soundswipe_v2_api.postman_collection.json`](postman/soundswipe_v2_api.postman_collection.json) (v2 API, 12 requests, 27 assertions) · [`scripts/check_deployed.py`](scripts/check_deployed.py) · [`tests/`](tests/) |
 
 The app has four tabs:
 - **Home:** a Netflix-style catalog with a featured song, then rows you scroll sideways: Trending, top songs per genre family, Hidden gems (random less-played songs, a counterweight to popularity bias) and, once you like songs, **"Because you liked …"** rows from the live model plus **My List**.

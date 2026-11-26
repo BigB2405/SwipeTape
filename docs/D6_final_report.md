@@ -96,6 +96,7 @@ M5 uses a soft maximum over liked songs (τ = 0.3), so two different tastes are 
 - Validation was used twice in D3. The test split was used **once**, on Nov 22, 2026, with all settings frozen.
 - The dislike comparison in §4 was added after the first test run, to answer the question's dislike half. It uses the D3-fixed settings and its own random stream, and no other number changed.
 - Before D5, the app's `songs.json` held 5,010 test-split songs for browsing. They were never used to fit, tune or select any model. D5 rebuilt the file from train + validation only (asserted).
+- **The live site now runs v2 (Nov 25), not the frozen model.** v2 (M6) adds real genre tags and a small popularity boost to M5, chosen on *validation only* (genre agreement 19% → 98%). We did **not** reopen the test split for it, so every test number in this report is about M5. M5 is still served unchanged by the D4 API.
 
 ## 7. Conclusions
 - **Shared audio features of liked songs improve a swipe-based playlist**, and by a lot. The frozen hybrid kNN finds listeners' held-out songs 26× more often than popularity and 1.66× more often than the app's original method, on artists it has never seen.

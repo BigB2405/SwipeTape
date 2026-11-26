@@ -1,0 +1,506 @@
+{
+  "info": {
+    "name": "SoundSwipe API v2 (live site)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "SoundSwipe v2 API (separate Modal app swipetape-api-v2, used by the live website). Same 10 requests and assertions as the D4/D5 collection, plus 2 for the v2 `languages` field. The D4 API keeps its own collection: swipetape_api.postman_collection.json."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://bigb2405--swipetape-api-v2-web.us-east.modal.run"
+    },
+    {
+      "key": "liked1",
+      "value": ""
+    },
+    {
+      "key": "liked2",
+      "value": ""
+    },
+    {
+      "key": "liked3",
+      "value": ""
+    },
+    {
+      "key": "disliked1",
+      "value": ""
+    },
+    {
+      "key": "seed1",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1 Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"status ok and model loaded\", () => { const j = pm.response.json(); pm.expect(j.status).to.eql(\"ok\"); pm.expect(j.artifact_loaded).to.eql(true); });",
+              "pm.test(\"responds in under 5 s\", () => pm.expect(pm.response.responseTime).to.be.below(5000));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 Pipeline info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/pipeline/info",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pipeline",
+            "info"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"describes the artifact\", () => { const j = pm.response.json(); pm.expect(j.steps.map(s => s.name)).to.eql([\"embed\", \"rec\"]); pm.expect(j.steps[0].class).to.eql(\"SongEmbedder\"); pm.expect(j.sklearn_version).to.be.a(\"string\"); pm.expect(j.built_at).to.be.a(\"string\"); pm.expect(j.catalog_size).to.be.above(1000); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 Sample tracks (fills ids for the next request)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/sample?n=6&seed=1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "sample"
+          ],
+          "query": [
+            {
+              "key": "n",
+              "value": "6"
+            },
+            {
+              "key": "seed",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const t = pm.response.json().tracks;",
+              "pm.test(\"returns 6 tracks with ids\", () => { pm.expect(t.length).to.eql(6); t.forEach(x => pm.expect(x.track_id).to.match(/^[A-Za-z0-9]{22}$/)); });",
+              "pm.collectionVariables.set(\"liked1\", t[0].track_id); pm.collectionVariables.set(\"liked2\", t[1].track_id); pm.collectionVariables.set(\"liked3\", t[2].track_id); pm.collectionVariables.set(\"disliked1\", t[3].track_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 Recommend: valid request (200)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"{{liked1}}\",\n    \"{{liked2}}\",\n    \"{{liked3}}\"\n  ],\n  \"disliked_ids\": [\n    \"{{disliked1}}\"\n  ],\n  \"k\": 8\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const j = pm.response.json(); const liked = [pm.collectionVariables.get(\"liked1\"), pm.collectionVariables.get(\"liked2\"), pm.collectionVariables.get(\"liked3\"), pm.collectionVariables.get(\"disliked1\")];",
+              "pm.test(\"returns k=8 recommendations with the documented fields\", () => { pm.expect(j.k).to.eql(8); pm.expect(j.recommendations.length).to.eql(8); j.recommendations.forEach(r => { pm.expect(r).to.have.all.keys(\"track_id\", \"track_name\", \"artist\", \"score\", \"because_you_liked\"); }); });",
+              "pm.test(\"never recommends a swiped track\", () => j.recommendations.forEach(r => pm.expect(liked).to.not.include(r.track_id)));",
+              "pm.test(\"ranked best first and each pick is explained by a liked song\", () => { const s = j.recommendations.map(r => r.score); pm.expect(s).to.eql([...s].sort((a, b) => b - a)); j.recommendations.forEach(r => pm.expect(liked.slice(0, 3)).to.include(r.because_you_liked)); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 Recommend: empty liked_ids (422)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));",
+              "pm.test(\"explains the problem\", () => pm.expect(pm.response.json().detail).to.be.an(\"array\").that.is.not.empty);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 Recommend: k out of range (422)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"{{liked1}}\"\n  ],\n  \"k\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 Recommend: unknown track id (422)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"ZZZZZZZZZZZZZZZZZZZZZZ\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));",
+              "pm.test(\"names the unknown id\", () => pm.expect(JSON.stringify(pm.response.json())).to.include(\"unknown track ids\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8 Search: valid query (200)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/search?q=yellow&limit=5",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "yellow"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const t = pm.response.json().tracks;",
+              "pm.test(\"returns up to 5 tracks with ids, best match first\", () => { pm.expect(t.length).to.be.within(1, 5); t.forEach(x => pm.expect(x.track_id).to.match(/^[A-Za-z0-9]{22}$/)); pm.expect(t[0].track_name.toLowerCase()).to.eql(\"yellow\"); pm.expect(t[0].match).to.eql(0); });",
+              "pm.collectionVariables.set(\"seed1\", t[0].track_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9 Search: query too short (422)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/search?q=a",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "a"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Find similar: one seed, k=5 (200)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"{{seed1}}\"\n  ],\n  \"k\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const r = pm.response.json().recommendations;",
+              "pm.test(\"exactly 5 songs, none is the seed\", () => { pm.expect(r.length).to.eql(5); r.forEach(x => pm.expect(x.track_id).to.not.eql(pm.collectionVariables.get(\"seed1\"))); });",
+              "pm.test(\"scores are sorted high to low\", () => { for (let i = 1; i < r.length; i++) pm.expect(r[i - 1].score).to.be.at.least(r[i].score); });",
+              "pm.test(\"each pick explains itself with the seed\", () => r.forEach(x => pm.expect(x.because_you_liked).to.eql(pm.collectionVariables.get(\"seed1\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 v2: recommend with languages=[\"en\"] (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test(\"returns 10 picks, sorted by score\", () => { pm.expect(j.recommendations.length).to.eql(10); const s = j.recommendations.map(r => r.score); pm.expect(s).to.eql([...s].sort((a, b) => b - a)); });",
+              "pm.test(\"scores stay within 0-1\", () => j.recommendations.forEach(r => { pm.expect(r.score).to.be.within(0, 1); }));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"{{liked1}}\",\n    \"{{liked2}}\"\n  ],\n  \"k\": 10,\n  \"languages\": [\n    \"en\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        }
+      }
+    },
+    {
+      "name": "12 v2: unknown language code (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 422\", () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"liked_ids\": [\n    \"{{liked1}}\"\n  ],\n  \"k\": 5,\n  \"languages\": [\n    \"zz\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/recommend",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recommend"
+          ]
+        }
+      }
+    }
+  ]
+}
