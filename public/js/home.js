@@ -78,7 +78,7 @@ async function buildPersonal() {
   for (const e of likes) { if (!seeds.some((s) => firstArtist(row(s.t)[ARTIST]) === firstArtist(row(e.t)[ARTIST]))) seeds.push(e); if (seeds.length === 2) break; }
 
   box.innerHTML =
-    seeds.map((s, k) => shelfHTML(`Because you liked <em>${esc(cleanName(row(s.t)[NAME]))}</em>`, skeleton(), { id: `byl${k}`, sub: "From the SwipeTape model" })).join("") +
+    seeds.map((s, k) => shelfHTML(`Because you liked <em>${esc(cleanName(row(s.t)[NAME]))}</em>`, skeleton(), { id: `byl${k}`, sub: "From the SoundSwipe model" })).join("") +
     (list.length ? shelfHTML("My List", list.map((t) => tileHTML(t)).join("")) : "") +
     (!seeds.length && !list.length ? `<div class="home-nudge">
         <p><b>Make Home yours.</b> Like a few songs on the <a href="#/swipe">Swipe</a> tab and we'll add rows picked by the model just for you${signedIn() ? "" : ` (<a href="#/me">sign in</a> to keep them)`}.</p></div>` : "");

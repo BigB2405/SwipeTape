@@ -12,11 +12,11 @@ let active = false;
 function authFormHTML() {
   if (!account.enabled) {
     return `<div class="auth-card"><h2>Accounts are coming soon</h2>
-      <p class="muted">This copy of SwipeTape isn't connected to the account service yet, so everything works in guest mode: your swipes last until you close the tab.</p></div>`;
+      <p class="muted">This copy of SoundSwipe isn't connected to the account service yet, so everything works in guest mode: your swipes last until you close the tab.</p></div>`;
   }
   const up = mode === "signup";
   return `<div class="auth-card">
-    <h2>${up ? "Create your SwipeTape account" : "Welcome back"}</h2>
+    <h2>${up ? "Create your SoundSwipe account" : "Welcome back"}</h2>
     <p class="muted">${up ? "Save your swipes and My List, and get Home rows picked for you." : "Sign in to see your swipes, My List and your picks."}</p>
     ${CONFIG.GOOGLE_LOGIN ? `<button class="google" id="googleBtn">${GOOGLE}<span>Continue with Google</span></button>
     <div class="or"><span>or</span></div>` : ""}

@@ -493,7 +493,7 @@ async function finish() {
   $("#matchSub").textContent = `You liked ${nLike + nLove} of ${state.swipes.length} songs${nLove ? ` and loved ${nLove}` : ""}.`;
   $("#taste").innerHTML = tasteHTML(tasteProfile(likes));
   $("#plMeta").textContent = "";
-  $("#playlist").innerHTML = `<li class="loading-state"><div class="spinner"></div><span id="mixWait">Asking the SwipeTape model for your mix…</span></li>`;
+  $("#playlist").innerHTML = `<li class="loading-state"><div class="spinner"></div><span id="mixWait">Asking the SoundSwipe model for your mix…</span></li>`;
 
   let picks, source = "model", why = "";
   try {
@@ -511,7 +511,7 @@ async function finish() {
   $("#mixSource").hidden = false;
   $("#mixSource").className = "mix-source " + source;
   $("#mixSource").innerHTML = source === "model"
-    ? "Picked by the SwipeTape model (song kNN, live API). % = how close each song is to the songs you liked (audio features + genre)."
+    ? "Picked by the SoundSwipe model (song kNN, live API). % = how close each song is to the songs you liked (audio features + genre)."
     : `Offline picks: a simple in-browser formula, because the model API failed (${esc(why)}). <button class="linkbtn" id="retryMix">Try the model again</button>`;
   $("#matchSub").textContent += ` Here are ${picks.length} songs picked to match.`;
   const mins = Math.round(picks.reduce((a, p) => a + (row(p.t)[DUR] || 0), 0) / 60);

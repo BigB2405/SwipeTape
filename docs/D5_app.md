@@ -1,6 +1,6 @@
 # D5: Working application and tests
 
-**DTSC 3602 · Group 10 · SwipeTape**
+**DTSC 3602 · Group 10 · SoundSwipe** (project and repository name: SwipeTape)
 
 | Item | Link |
 |---|---|
@@ -8,12 +8,12 @@
 | Live API (Modal) | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
 | Frontend code | [`public/`](../public/): `index.html`, `style.css`, `config.js`, `js/*.js` |
 | Postman collection | [`postman/swipetape_api.postman_collection.json`](../postman/swipetape_api.postman_collection.json) (10 requests, 29 assertion lines) |
-| Screenshots | [`docs/d5_screenshots/`](d5_screenshots/) |
+| Screenshots | [`docs/d5_screenshots/`](d5_screenshots/): app `1_`–`5_` (retaken Nov 25 with the SoundSwipe name), Postman `6_`–`8_`, API-unreachable error state `9_`, phone layout `10_` |
 | Tag | `d5-final` |
 
 ## What the app does
 
-SwipeTape helps listeners find songs they like beyond the current hits. It has four tabs:
+**SoundSwipe** (the website's public name since Nov 25; the repository, API and tag names still say SwipeTape) helps listeners find songs they like beyond the current hits. It has four tabs:
 
 | Tab | What the user does | Live API call |
 |---|---|---|
@@ -27,7 +27,7 @@ Guests can use Home, Swipe and Find similar without an account. Signing in saves
 ## Inputs and outputs a person can understand
 
 - **Inputs** are actions, not ids: a swipe, a tap on a song, or a search by title or artist. The app turns them into Spotify track ids for the API.
-- **Outputs** show the song title, artist, cover art and a 30-second preview, with a **% similarity** (the model's cosine score × 100), a "Because you liked …" reason, and a Spotify link. Each result explains where it came from ("From the SwipeTape song kNN model (live API)").
+- **Outputs** show the song title, artist, cover art and a 30-second preview, with a **% similarity** (the model's cosine score × 100), a "Because you liked …" reason, and a Spotify link. Each result explains where it came from ("From the SoundSwipe song kNN model (live API)").
 
 ## Loading and error states
 
@@ -57,8 +57,8 @@ The fitted pipeline (`pipeline.joblib`) is the same one as in D4. It was not ret
 
 ## Tests
 
-1. **Postman** (deployed URL, 10 requests, all with assertions): health (200, model loaded, under 5 s), pipeline info (steps, versions, catalog size), sample (stores ids), valid recommend (200, k items, no swiped songs), empty `liked_ids` (422), `k` out of range (422), unknown track id (422), valid search (best match first), too-short search (422), and **Find similar** with one seed and `k=5` (exactly 5 songs, sorted by score, none is the seed). **Result (Postman web Collection Runner, Nov 18, 2026): 23/23 tests passed, 0 failed, average response 224 ms** (`docs/d5_screenshots/6_*`–`8_*`). An earlier run on a cold container passed 22/23: `/health` took 10.2 s (Modal loading the model) and failed the "under 5 s" check. The app handles this with its "Waking up the model…" message, and the frontend sends a warm-up `/health` request when it loads.
-2. **`scripts/check_deployed.py`** against the Modal URL: the deployed API returns the same tracks, order and scores (within 1e-4) as the local pipeline, all invalid inputs return 422, search matches the local results, and a CORS preflight from a `vercel.app` origin is allowed. **ALL CHECKS PASSED** (Nov 18, 2026).
+1. **Postman** (deployed URL, 10 requests, all with assertions): health (200, model loaded, under 5 s), pipeline info (steps, versions, catalog size), sample (stores ids), valid recommend (200, k items, no swiped songs), empty `liked_ids` (422), `k` out of range (422), unknown track id (422), valid search (best match first), too-short search (422), and **Find similar** with one seed and `k=5` (exactly 5 songs, sorted by score, none is the seed). **Result (Postman web Collection Runner, Nov 18, 2026): 23/23 tests passed, 0 failed, average response 224 ms** (`docs/d5_screenshots/6_*`–`8_*`). **Re-run Nov 25, 2026 (newman CLI, same collection, deployed URL): 23/23 assertions passed, 10/10 requests, average response 86 ms.** An earlier run on a cold container passed 22/23: `/health` took 10.2 s (Modal loading the model) and failed the "under 5 s" check. The app handles this with its "Waking up the model…" message, and the frontend sends a warm-up `/health` request when it loads.
+2. **`scripts/check_deployed.py`** against the Modal URL: the deployed API returns the same tracks, order and scores (within 1e-4) as the local pipeline, all invalid inputs return 422, search matches the local results, and a CORS preflight from a `vercel.app` origin is allowed. **ALL CHECKS PASSED** (Nov 18, re-checked Nov 25, 2026).
 3. **pytest**: 23 tests (15 from D4, plus search, invalid search, 503 search and CORS allow/deny). All pass.
 4. **Browser checks** (desktop 1440×900 and phone 390×844): Home rows, search, the Find similar 5 results, a full swipe round with the playlist coming from the API, the detail sheet, the tab bar on phones, and the error and offline states with the API stopped.
 
@@ -90,4 +90,4 @@ uv run --frozen python scripts/check_deployed.py --url https://bigb2405--swipeta
 
 ## Contributions and AI use
 
-_[Confirm with the group.]_ Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, Supabase, Google and Vercel setup, tests and Postman. Claude Code drafted the frontend modules, the API changes, the tests and this note; the group reviewed and ran them.
+Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, Supabase, Google and Vercel setup, tests and Postman. Claude Code drafted the frontend modules, the API changes, the tests and this note; Britain reviewed and ran them.
