@@ -329,9 +329,11 @@ class SwipeRecommender(BaseEstimator):
         if not len(like):
             raise ValueError("need at least one liked track")
         s = taste_scores(self.E_, like, dislike, self.tau, self.lam)
-        sim = np.clip(s, 0.0, 1.0)            # what the API reports as "score": similarity only (0-1)
         if getattr(self, "pop_w", 0.0) and getattr(self, "pop_", None) is not None:   # old bundles lack these
             s = s + self.pop_w * self.pop_
+        # The API's "score" is the ranking score clipped to 0-1, so the list is always sorted by it.
+        # With pop_w = 0 (M5, the D4 model) this is the similarity, exactly as before.
+        sim = np.clip(s, 0.0, 1.0)
         hidden = getattr(self, "hidden_", None)
         if hidden is not None and not self.seed_hides_[like].any():
             s = np.where(hidden, -np.inf, s)
