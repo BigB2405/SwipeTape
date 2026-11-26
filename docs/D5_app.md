@@ -9,7 +9,7 @@
 | D4 API (still live, unchanged) | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
 | Frontend code | [`public/`](../public/): `index.html`, `style.css`, `config.js`, `js/*.js` |
 | Postman collections | v2 API: [`postman/soundswipe_v2_api.postman_collection.json`](../postman/soundswipe_v2_api.postman_collection.json) (12 requests, 27 assertions) · D4/D5 API: [`postman/swipetape_api.postman_collection.json`](../postman/swipetape_api.postman_collection.json) (10 requests, 23 assertions) |
-| Screenshots | [`docs/d5_screenshots/`](d5_screenshots/): v2 app and Postman `v2_*`; D5 version `1_`–`10_` |
+| Screenshots | [`docs/d5_screenshots/`](d5_screenshots/): v2 live site `v2_1_`–`v2_7_` (survey, Home, playlist, Find similar, error state, phone) and v2 Postman run `v2_8_`; the D5 version before v2 `1_`–`10_` |
 | Branch / tag | `main` (v2) · branch `D5` and tag `d5-final` (the version before v2) |
 
 ## Update, Nov 25: the live site runs SoundSwipe v2
@@ -24,7 +24,7 @@ After the D5 build we renamed the site to **SoundSwipe** (instructor feedback on
 
 The v2 API is a **separate** Modal app, so the D4 API, its URL and its outputs did not change.
 
-**v2 checks (Nov 25, deployed URL):** Postman v2 collection **27/27 assertions passed** (health, pipeline info, sample, valid recommend, three 422s, search, short search 422, Find similar k=5, `languages=["en"]` sorted and within 0–1, unknown language 422); `check_deployed.py` with the v2 bundle **ALL CHECKS PASSED**; pytest 34/34. The D4 API still passes its own collection 23/23 and `check_deployed.py`.
+**v2 checks (Nov 25, deployed URL):** Postman v2 collection **27/27 assertions passed** (screenshot `v2_8_*`; health within 15 s, because a sleeping Modal container took 5.7 s to wake in one run and the app shows "Waking up the model…" meanwhile; pipeline info, sample, valid recommend, three 422s, search, short search 422, Find similar k=5, `languages=["en"]` sorted and within 0–1, unknown language 422); `check_deployed.py` with the v2 bundle **ALL CHECKS PASSED**; pytest 34/34. The D4 API still passes its own collection 23/23 and `check_deployed.py`.
 
 ## What the app does
 

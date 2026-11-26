@@ -54,7 +54,7 @@
             "exec": [
               "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
               "pm.test(\"status ok and model loaded\", () => { const j = pm.response.json(); pm.expect(j.status).to.eql(\"ok\"); pm.expect(j.artifact_loaded).to.eql(true); });",
-              "pm.test(\"responds in under 5 s\", () => pm.expect(pm.response.responseTime).to.be.below(5000));"
+              "pm.test(\"responds in under 15 s (includes a Modal cold start)\", () => pm.expect(pm.response.responseTime).to.be.below(15000));"
             ]
           }
         }
