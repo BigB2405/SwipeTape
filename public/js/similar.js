@@ -93,7 +93,7 @@ async function loadSimilar(t) {
     });
     if (seq !== recSeq) return;
     box.innerHTML = `<div class="sim-head"><h3>5 songs you'd also like</h3>
-        <span class="sim-note">From the SwipeTape song kNN model (live API). Similarity combines audio features and genre.</span></div>
+        <span class="sim-note">From the SoundSwipe song kNN model (live API). Similarity combines audio features and genre.</span></div>
       <div class="simgrid">${recs.map(resultCard).join("")}</div>`;
     hydrate(box);
   } catch (e) {

@@ -1,6 +1,6 @@
 # D5: Working application and tests
 
-**DTSC 3602 · Group 10 · SwipeTape**
+**DTSC 3602 · Group 10 · SoundSwipe** (project and repository name: SwipeTape)
 
 | Item | Link |
 |---|---|
@@ -13,7 +13,7 @@
 
 ## What the app does
 
-SwipeTape helps listeners find songs they like beyond the current hits. It has four tabs:
+**SoundSwipe** (the website's public name since Nov 25; the repository, API and tag names still say SwipeTape) helps listeners find songs they like beyond the current hits. It has four tabs:
 
 | Tab | What the user does | Live API call |
 |---|---|---|
@@ -27,7 +27,7 @@ Guests can use Home, Swipe and Find similar without an account. Signing in saves
 ## Inputs and outputs a person can understand
 
 - **Inputs** are actions, not ids: a swipe, a tap on a song, or a search by title or artist. The app turns them into Spotify track ids for the API.
-- **Outputs** show the song title, artist, cover art and a 30-second preview, with a **% similarity** (the model's cosine score × 100), a "Because you liked …" reason, and a Spotify link. Each result explains where it came from ("From the SwipeTape song kNN model (live API)").
+- **Outputs** show the song title, artist, cover art and a 30-second preview, with a **% similarity** (the model's cosine score × 100), a "Because you liked …" reason, and a Spotify link. Each result explains where it came from ("From the SoundSwipe song kNN model (live API)").
 
 ## Loading and error states
 
@@ -90,4 +90,4 @@ uv run --frozen python scripts/check_deployed.py --url https://bigb2405--swipeta
 
 ## Contributions and AI use
 
-_[Confirm with the group.]_ Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, Supabase, Google and Vercel setup, tests and Postman. Claude Code drafted the frontend modules, the API changes, the tests and this note; the group reviewed and ran them.
+Britain Russell: app redesign (tabs, Home, Find similar, accounts), search endpoint and CORS, Supabase, Google and Vercel setup, tests and Postman. Claude Code drafted the frontend modules, the API changes, the tests and this note; Britain reviewed and ran them.
