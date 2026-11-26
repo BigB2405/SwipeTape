@@ -1,6 +1,6 @@
-# SwipeTape
+# SwipeTape (website: SoundSwipe)
 
-SwipeTape is a music discovery web app built around a Tinder-style swipe. Users listen to 30-second song previews and swipe left or right (or up to "love" a track), and the app builds a personalized playlist from their taste. Our goal is to help listeners get past trending hits and discover smaller artists they would otherwise miss.
+SwipeTape is a music discovery web app, shown to users as **SoundSwipe**, built around a Tinder-style swipe. Users listen to 30-second song previews and swipe left or right (or up to "love" a track), and the app builds a personalized playlist from their taste. Our goal is to help listeners get past trending hits and discover smaller artists they would otherwise miss.
 
 **DTSC 3602 · Fall 2026 · Group 10:** Devanshi Parmar, Britain Russell, Aarav Shroff
 
