@@ -8,7 +8,7 @@
 | Live API (Modal) | https://bigb2405--swipetape-api-web.us-east.modal.run · [/docs](https://bigb2405--swipetape-api-web.us-east.modal.run/docs) |
 | Frontend code | [`public/`](../public/): `index.html`, `style.css`, `config.js`, `js/*.js` |
 | Postman collection | [`postman/swipetape_api.postman_collection.json`](../postman/swipetape_api.postman_collection.json) (10 requests, 29 assertion lines) |
-| Screenshots | [`docs/d5_screenshots/`](d5_screenshots/) |
+| Screenshots | [`docs/d5_screenshots/`](d5_screenshots/): app `1_`–`5_` (retaken Nov 25 with the SoundSwipe name), Postman `6_`–`8_`, API-unreachable error state `9_`, phone layout `10_` |
 | Tag | `d5-final` |
 
 ## What the app does
@@ -57,8 +57,8 @@ The fitted pipeline (`pipeline.joblib`) is the same one as in D4. It was not ret
 
 ## Tests
 
-1. **Postman** (deployed URL, 10 requests, all with assertions): health (200, model loaded, under 5 s), pipeline info (steps, versions, catalog size), sample (stores ids), valid recommend (200, k items, no swiped songs), empty `liked_ids` (422), `k` out of range (422), unknown track id (422), valid search (best match first), too-short search (422), and **Find similar** with one seed and `k=5` (exactly 5 songs, sorted by score, none is the seed). **Result (Postman web Collection Runner, Nov 18, 2026): 23/23 tests passed, 0 failed, average response 224 ms** (`docs/d5_screenshots/6_*`–`8_*`). An earlier run on a cold container passed 22/23: `/health` took 10.2 s (Modal loading the model) and failed the "under 5 s" check. The app handles this with its "Waking up the model…" message, and the frontend sends a warm-up `/health` request when it loads.
-2. **`scripts/check_deployed.py`** against the Modal URL: the deployed API returns the same tracks, order and scores (within 1e-4) as the local pipeline, all invalid inputs return 422, search matches the local results, and a CORS preflight from a `vercel.app` origin is allowed. **ALL CHECKS PASSED** (Nov 18, 2026).
+1. **Postman** (deployed URL, 10 requests, all with assertions): health (200, model loaded, under 5 s), pipeline info (steps, versions, catalog size), sample (stores ids), valid recommend (200, k items, no swiped songs), empty `liked_ids` (422), `k` out of range (422), unknown track id (422), valid search (best match first), too-short search (422), and **Find similar** with one seed and `k=5` (exactly 5 songs, sorted by score, none is the seed). **Result (Postman web Collection Runner, Nov 18, 2026): 23/23 tests passed, 0 failed, average response 224 ms** (`docs/d5_screenshots/6_*`–`8_*`). **Re-run Nov 25, 2026 (newman CLI, same collection, deployed URL): 23/23 assertions passed, 10/10 requests, average response 86 ms.** An earlier run on a cold container passed 22/23: `/health` took 10.2 s (Modal loading the model) and failed the "under 5 s" check. The app handles this with its "Waking up the model…" message, and the frontend sends a warm-up `/health` request when it loads.
+2. **`scripts/check_deployed.py`** against the Modal URL: the deployed API returns the same tracks, order and scores (within 1e-4) as the local pipeline, all invalid inputs return 422, search matches the local results, and a CORS preflight from a `vercel.app` origin is allowed. **ALL CHECKS PASSED** (Nov 18, re-checked Nov 25, 2026).
 3. **pytest**: 23 tests (15 from D4, plus search, invalid search, 503 search and CORS allow/deny). All pass.
 4. **Browser checks** (desktop 1440×900 and phone 390×844): Home rows, search, the Find similar 5 results, a full swipe round with the playlist coming from the API, the detail sheet, the tab bar on phones, and the error and offline states with the API stopped.
 
